@@ -1,0 +1,32 @@
+{
+	"name": "lubosdz/yii2-template-engine",
+	"description": "Zero configuration templating engine for Yii ver. 2 PHP framework.",
+	"type": "yii2-extension",
+	"license": "BSD-3-Clause",
+	"keywords": ["yii2", "template", "templating", "view renderer"],
+	"support": {
+		"source": "https://github.com/lubosdz/yii2-template-engine",
+		"issues": "https://github.com/lubosdz/yii2-template-engine/issues"
+	},
+	"authors": [
+		{
+			"name": "lubosdz",
+			"email": "lubosdz@gmail.com"
+		}
+	],
+	"require": {
+		"php": ">=7.0",
+		"yiisoft/yii2": "^2.0.35"
+	},
+	"repositories": [
+		{
+			"type": "composer",
+			"url": "https://asset-packagist.org"
+		}
+	],
+	"autoload": {
+		"psr-4": {
+			"lubosdz\\yii2\\": "src"
+		}
+	}
+}
