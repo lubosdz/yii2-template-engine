@@ -2,7 +2,7 @@ Yii2 Template Engine
 ====================
 
 Simple, fast and flexible HTML templating engine for Yii2 PHP framework with zero configuration.
-Supports basic **control structures** (IF, FOR, SET), **dynamic directives** and **active records relations**.
+Supports basic control structures (IF, FOR, SET), dynamic directives and active record relations.
 It is similar to [Twig](https://twig.symfony.com/) or [Blade](https://laravel.com/docs/8.x/blade), though much simpler.
 
 Installation
@@ -19,36 +19,41 @@ Basic usage
 Initiate template engine inside Yii application:
 
 ~~~php
-$template = new \lubosdz\yii2\TemplateEngine;
+$engine = new \lubosdz\yii2\TemplateEngine;
 ~~~
 
-or register as component in `app/config/main.php`:
+or register as a component in `app/config/main.php`:
 
 ~~~php
 ...
 'components' => [
-	'template' => [
+	'engine' => [
 		'class' => 'lubosdz\yii2\TemplateEngine',
 	]
 ]
 ...
 
-$template = Yii::$app->template;
+$engine = Yii::$app->template;
 ~~~
 
-Use method `render($html [, $values])` to generate HTML output:
+Use method `$engine->render($html [, $values])` to generate HTML output:
 
-* $html = source HTML markup with placeholders like `{{ processMe }}`
-* $values = array of values to be injected into or evaluated inside placeholders
+* $html = source HTML markup with placeholders like `<h1>{{ processMe }}</h1>`
+* $values = array of values like pairs `[processMe => value]` to be injected into or evaluated inside placeholders
 
 
 Simple placeholders
 -------------------
 
+Templating engine collects all `placeholders` within supplied HTML markup and attempts to replace them with matching `$values` or evaluate as control structure.
+Placeholders that have not been processed are left untouched by default. This behaviour is suitable for development.
+In production, setting `$engine->setForceReplace(true)` can be set to replace unprocessed placeholders with empty string.
+
 ~~~php
-$params = ['who' => 'world'];
-$html = $template->render('Hello <b>{{ who }}</b>.', $params);
-// output: "Hello <b>world</b>."
+$html = 'Hello <b>{{ who }}</b>!';
+$values = ['who' => 'world'];
+$html = $engine->render($html, $values);
+// output: "Hello <b>world</b>!"
 ~~~
 
 
@@ -56,50 +61,51 @@ Built-in directives
 -------------------
 
 Template engine comes with couple of generally usable methods for basic date,
-time and string manipulation. These can be referenced directly inside
-the template markup. Directives use the pipe operator `|` to chain operations
-within the placeholder.
+time and string manipulation - `directives`. These can be referenced directly
+inside supplied HTML markup. Directives use the pipe operator `|` to chain
+operations within the placeholder.
 
 ~~~php
-$html = $template->render('Generated on {{ today }} at {{ time }}.');
-// output example - respects locales: "Generated on Dec 31, 2021 at 11:59pm."
+$html = $engine->render('Generated on {{ today }} at {{ time }}.');
+// output example - respects EN locale: "Generated on Dec 31, 2021 at 11:59pm."
+// output example - respects SK/CS locale: "Generated on 31. 12. 2021 at 23:59."
 
-$html = $template->render('Let's meet at {{ now(7200) | time }}.');
-// output example, if now is 8:30am: "Let's meet at 10:30am." (shift +2 hours)
+$html = $engine->render('Let's meet at {{ now(7200) | time }}.');
+// output example, if now is 8:30am: "Let's meet at 10:30am." (shift +2 hours = 7200 secs)
 
-$html = $template->render('My name is {{ user.name | escape }}.', ['user' => [
+$html = $engine->render('My name is {{ user.name | escape }}.', ['user' => [
 	'name' => '<John>',
 ]]);
-// output: "My name is &lt;John&gt;."
+// filtered output: "My name is &lt;John&gt;."
 
-$html = $template->render('Hello {{ user.name | truncate(5) | escape }}.', ['user' => [
+$html = $engine->render('Hello {{ user.name | truncate(5) | e }}.', ['user' => [
 	'name' => '<John>',
 ]]);
-// output: "Hello &lt;John...."
+// truncated and filtered output: "Hello &lt;John...."
 ~~~
 
 Specific for the Yii 2 framework, object properties as well as related models (AR)
 are automatically collected, if referenced inside placeholders.
 
 ~~~php
-$html = $template->render('Hello {{ customer.name }}.', [
-	'user' => Customer::findOne($id),
+$html = $engine->render('Hello {{ customer.name }}.', [
+	'user' => Customer::findOne($id), // find active record
 ]);
 // output e.g.: "Hello John Doe."
 
-$html = $template->render('Address is {{ customer.address.city }} {{ customer.address.zip }}.', [
-	'user' => Customer::findOne($id), // customer has defined relation to object `Address`
+$html = $engine->render('Address is {{ customer.address.city }} {{ customer.address.zip }}.', [
+	'user' => Customer::findOne($id), // Customer has defined relation to object `Address`
 ]);
 // output e.g.: "Address is Prague 10000."
 ~~~
 
 IF .. ELSEIF .. ELSE .. ENDIF
-----------
+-----------------------------
 
 Control structure `IF .. ELSEIF .. ELSE .. ENDIF` is supported:
 
 ~~~php
-$parse = "
+$templateHtml = "
 {{ if countOrders > 0 }}
 	<h3>Thank you!</h3>
 {{ else }}
@@ -111,17 +117,17 @@ $values = [
 	'countOrders' => count(Customer::findOne($id)->orders);
 ];
 
-$html = $template->render($parse, $values);
+$html = $engine->render($templateHtml, $values);
 // output e.g.: "<h3>Thank you!</h3>" - if some order found
 ~~~
 
 FOR ... ELSEFOR .. ENDFOR
------------
+-------------------------
 
 Structure `FOR ... ELSEFOR .. ENDFOR` will create loop:
 
 ~~~php
-$parse = "
+$templateHtml = "
 <table>
 {{ for item in items }}
 	{{ SET subtotal = item.qty * item.price * (100 + item.vat) / 100 }}
@@ -148,7 +154,7 @@ $values = [
 	]
 ];
 
-$html = $template->render($parse, $values);
+$html = $engine->render($templateHtml, $values);
 // outputs valid HTML table with items e.g.: "<table><tr><td>#1</td><td> ..."
 ~~~
 
@@ -159,6 +165,7 @@ Following auxiliary variables are available inside each loop:
 * `length` .. (int) total number of items/iterations
 * `first` .. (bool) true on first iteration
 * `last` .. (bool) true on last iteration
+
 
 SET command
 -----------
@@ -175,20 +182,42 @@ See also example under `IF`.
 Note: shorthand syntax `+=` e.g. `SET total += subtotal` is NOT supported.
 
 
+Dynamic directives
+------------------
+
+Dynamic directives can be added at runtime as **callable anonymous functions accepting arguments**.
+In the following example we will attach dynamic directive named `coloredText`
+and render output with colored text:
+
+
+```php
+// attach dynamic directive
+$this->engine->setDirective('coloredText', function($text, $color){
+	return "<span style='color: {$color}'>{$text}</span>";
+});
+
+// process template - we can set different text color for each call
+$result = $this->engine->render("this is {{ output | coloredText(yellow) }}", [
+	'output' => 'colored text',
+]);
+// output: "this is <span style='color: yellow'>colored text</span>"
+```
+
+
 Tips
 ====
 
 * see `tests/TemplateEngineTest.php` for more examples
 * Running tests via phpunit on [NuSphere's PhpEd](http://www.nusphere.com/) in debug mode:
 
-> use `-d` parameter to inject debugging arguments, e.g. `> phpunit -d DBGSESSID=12655478@127.0.0.1:7869`
+> use `-d` parameter to inject debugging arguments, e.g. `> phpunit -d DBGSESSID=12655478@127.0.0.1:7869 %*`
 
 * Adding functionality - simply extend `TemplateEngine` class:
 
 ~~~php
 class MyRenderer extends \lubosdz\yii2\TemplateEngine
 {
-	// your code, directives, overrides ..
+	// your code, custom directives, override parent methods ..
 }
 ~~~
 
