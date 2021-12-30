@@ -1,6 +1,7 @@
 <?php
 /**
 * Tests for Yii2 templating engine
+* Tests pass for PHP 7.0 - 8.0
 */
 
 use lubosdz\yii2\TemplateEngine;
@@ -11,9 +12,16 @@ class TemplateEngineTest extends TestCase
 	protected $engine;
 
 	/**
-	 * Run before each test is started
-	 */
-	protected function setUp()
+	* Run before each test is started
+	* We intentionally avoid setUp() because it requires different syntax depending on PHP version:
+	* - PHP 8.1 requires parent's compatible syntax, means adding return type : void
+	* - PHP 7.1 - 8.0 will run, void supported
+	* - PHP 7.0 - does not recognize void
+	* We want simply run tests on any version 7.0+ without adjusting the code.
+	* Return types are not needed, neither strict mode.
+	*/
+	protected function setUpIndependentOfPhpVersion()
+	//protected function setUp() : void
 	{
 		// initiate static property Yii::$app
 		self::mockApp();
@@ -31,6 +39,8 @@ class TemplateEngineTest extends TestCase
 	*/
 	public function testModelsAndScalars()
 	{
+		$this->setUpIndependentOfPhpVersion();
+
 		$engine = $this->engine;
 		$formatter = Yii::$app->formatter;
 		$client = new Customer();
@@ -132,6 +142,8 @@ HTML;
 	*/
 	public function testDynamicDirectives()
 	{
+		$this->setUpIndependentOfPhpVersion();
+
 		// attach dynamic directive
 		$this->engine->setDirective('coloredText', function($text, $color){
 			return "<span style='color: {$color}'>{$text}</span>";
@@ -150,6 +162,8 @@ HTML;
 	*/
 	public function test_If()
 	{
+		$this->setUpIndependentOfPhpVersion();
+
 		$engine = $this->engine;
 
 		$params = [
@@ -201,6 +215,8 @@ HTML;
 	*/
 	public function test_ForAndSet()
 	{
+		$this->setUpIndependentOfPhpVersion();
+
 		$engine = $this->engine;
 
 		$params = [

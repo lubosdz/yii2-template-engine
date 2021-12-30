@@ -427,7 +427,7 @@ class TemplateEngine
 			if ($part && false !== strpos($part, '}}')) {
 				list($condition, $html) = explode('}}', $part, 2);
 				if(trim($condition) != ''){
-					$val = ''; // ensure placeholder will be replaced even on false condition
+					$val = $php = ''; // ensure placeholder will be replaced even on false condition
 					$isTrue = false;
 					try{
 						$php = $this->translateExpression($condition, $paramsValid);
@@ -572,7 +572,7 @@ class TemplateEngine
 		if (!empty($parts[1])) {
 			$varName = trim(preg_replace('/^set /i', '', $parts[0]));
 			$expression = trim($parts[1]);
-			$result = null;
+			$result = $php = null;
 
 			if (!array_key_exists($varName, $this->globalVars)) {
 				$this->globalVars[$varName] = null;
@@ -635,6 +635,11 @@ class TemplateEngine
 		return $this->formatter->asDate($ts, $format);
 	}
 
+	/**
+	* Return locally formatted date
+	* @param int|string $val Timestamp or date string
+	* @param string $format e.g. medium|short|long
+	*/
 	protected function dir_date($val, $format = null)
 	{
 		if (!$val) {
@@ -645,6 +650,11 @@ class TemplateEngine
 		return $this->formatter->asDate($ts, $format);
 	}
 
+	/**
+	* Return locally formatted time
+	* @param int|string $val Timestamp or date string
+	* @param string $format e.g. medium|short|long
+	*/
 	protected function dir_time($val, $format = null)
 	{
 		if (!$val) {
@@ -656,6 +666,7 @@ class TemplateEngine
 	}
 
 	/**
+	* Return locally formatted date and time
 	* Example: Now is {{ now | datetime(short; short) }} time!
 	* @param int|string $val If empty use current time
 	* @param string $formatDate e.g. short|medium

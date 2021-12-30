@@ -1,9 +1,12 @@
 Yii2 Template Engine
 ====================
 
-Simple, fast and flexible HTML templating engine for Yii2 PHP framework with zero configuration.
+Simple, fast and flexible HTML templating engine for [Yii2](https://www.yiiframework.com/) PHP framework with zero configuration.
 Supports basic control structures (IF, FOR, SET), dynamic directives and active record relations.
 It is similar to [Twig](https://twig.symfony.com/) or [Blade](https://laravel.com/docs/8.x/blade), though much simpler.
+
+It can be used to render e.g. an invoice or a contract from HTML markup edited in a WYSIWYG editor and turn it optionally into a PDF or MS Word file.
+
 
 Installation
 ============
@@ -41,6 +44,8 @@ Use method `$engine->render($html [, $values])` to generate HTML output:
 * $html = source HTML markup with placeholders like `<h1>{{ processMe }}</h1>`
 * $values = array of values like pairs `[processMe => value]` to be injected into or evaluated inside placeholders
 
+Once output generated, it can be e.g. supplied to [PDF](https://github.com/tecnickcom/TCPDF) or [MS Word](https://github.com/PHPOffice/PHPWord) renderer to produce a PDF or MS Word file respectively.
+
 
 Simple placeholders
 -------------------
@@ -52,7 +57,7 @@ In production, setting `$engine->setForceReplace(true)` can be set to replace un
 ~~~php
 $html = 'Hello <b>{{ who }}</b>!';
 $values = ['who' => 'world'];
-$html = $engine->render($html, $values);
+echo $engine->render($html, $values);
 // output: "Hello <b>world</b>!"
 ~~~
 
@@ -67,37 +72,65 @@ operations within the placeholder.
 
 ~~~php
 $html = $engine->render('Generated on {{ today }} at {{ time }}.');
-// output example - respects EN locale: "Generated on Dec 31, 2021 at 11:59pm."
-// output example - respects SK/CS locale: "Generated on 31. 12. 2021 at 23:59."
+// output - respecting EN locale: "Generated on Dec 31, 2021 at 11:59pm."
+// output - respecting SK/CS locale: "Generated on 31. 12. 2021 at 23:59."
 
-$html = $engine->render('Let's meet at {{ now(7200) | time }}.');
+echo $engine->render('Meet me at {{ now(7200) | time }}.');
 // output example, if now is 8:30am: "Let's meet at 10:30am." (shift +2 hours = 7200 secs)
 
-$html = $engine->render('My name is {{ user.name | escape }}.', ['user' => [
+echo $engine->render('My name is {{ user.name | escape }}.', ['user' => [
 	'name' => '<John>',
 ]]);
 // filtered output: "My name is &lt;John&gt;."
 
-$html = $engine->render('Hello {{ user.name | truncate(5) | e }}.', ['user' => [
+echo $engine->render('Hello {{ user.name | truncate(5) | e }}.', ['user' => [
 	'name' => '<John>',
 ]]);
 // truncated and filtered output: "Hello &lt;John...."
 ~~~
 
-Specific for the Yii 2 framework, object properties as well as related models (AR)
+Specific for the Yii 2 framework, object properties as well as related [models](https://www.yiiframework.com/doc/api/2.0/yii-base-model)
 are automatically collected, if referenced inside placeholders.
 
 ~~~php
 $html = $engine->render('Hello {{ customer.name }}.', [
-	'user' => Customer::findOne($id), // find active record
+	'customer' => Customer::findOne($id), // find active record
 ]);
 // output e.g.: "Hello John Doe."
 
 $html = $engine->render('Address is {{ customer.address.city }} {{ customer.address.zip }}.', [
-	'user' => Customer::findOne($id), // Customer has defined relation to object `Address`
+	'customer' => Customer::findOne($id), // Customer has defined relation to object `Address`
 ]);
 // output e.g.: "Address is Prague 10000."
 ~~~
+
+
+
+Dynamic directives
+------------------
+
+Dynamic directives allows extending functionality for chaining operations inside
+parsed placeholders. They can be added at a runtime as
+**callable anonymous functions accepting arguments**.
+
+In the following example we will attach dynamic directive named `coloredText`
+and render output with custom inline CSS:
+
+
+```php
+// attach dynamic directive (function) accepting 2 arguments
+$engine->setDirective('coloredText', function($text, $color){
+	return "<span style='color: {$color}'>{$text}</span>";
+});
+
+// process template - we can set different color in each call
+echo $engine->render("This is {{ output | coloredText(yellow) }}", [
+	'output' => 'colored text',
+]);
+// output: "This is <span style='color: yellow'>colored text</span>"
+```
+
+
 
 IF .. ELSEIF .. ELSE .. ENDIF
 -----------------------------
@@ -114,12 +147,13 @@ $templateHtml = "
 ";
 
 $values = [
-	'countOrders' => count(Customer::findOne($id)->orders);
+	'countOrders' => count(Customer::findOne($id)->orders); // e.g. 3
 ];
 
-$html = $engine->render($templateHtml, $values);
+echo $engine->render($templateHtml, $values);
 // output e.g.: "<h3>Thank you!</h3>" - if some order found
 ~~~
+
 
 FOR ... ELSEFOR .. ENDFOR
 -------------------------
@@ -158,7 +192,7 @@ $html = $engine->render($templateHtml, $values);
 // outputs valid HTML table with items e.g.: "<table><tr><td>#1</td><td> ..."
 ~~~
 
-Following auxiliary variables are available inside each loop:
+Following auxiliary variables are accessible inside each loop:
 
 * `index` .. (int) 1-based iteration counter
 * `index0` .. (int) 0-based iteration counter
@@ -167,45 +201,51 @@ Following auxiliary variables are available inside each loop:
 * `last` .. (bool) true on last iteration
 
 
+
 SET command
 -----------
 
-Allows manipulating local template variables:
+Allows manipulating local template variables, such as count totals:
 
 ```php
 {{ SET subtotal = item.qty * item.price * (100 + item.vat) / 100 }}
 {{ SET total = total + subtotal }}
 ```
 
-See also example under `IF`.
+See also example under `FOR`.
 
 Note: shorthand syntax `+=` e.g. `SET total += subtotal` is NOT supported.
 
 
-Dynamic directives
-------------------
 
-Dynamic directives can be added at runtime as **callable anonymous functions accepting arguments**.
-In the following example we will attach dynamic directive named `coloredText`
-and render output with colored text:
+Rendering PDF or MS Word files
+------------------------------
+
+Rendering engine allows user to safely change output without any programming knowledge.
+To add an extra value, we can also turn rendered HTML output into professionally
+looking [PDF](https://github.com/tecnickcom/TCPDF) or [MS Word](https://github.com/PHPOffice/PHPWord) file:
+
+~~~php
+
+// first process HTML template and input values
+$htmlOutput = $engine->render($htmlMarkup, $values);
+
+// then generate PDF file:
+$pdf = new \TCPDF();
+$pdf->writeHTML($htmlOutput);
+$path = $pdf->Output('/save/path/my-invoice.pdf');
+
+// or generate MS Word file:
+$word = new \PhpOffice\PhpWord\PhpWord();
+$section = $word->addSection();
+\PhpOffice\PhpWord\Shared\Html::addHtml($section, $htmlOutput);
+$writer = \PhpOffice\PhpWord\IOFactory::createWriter($word, 'Word2007');
+$writer->save('/save/path/my-invoice.docx');
+~~~
 
 
-```php
-// attach dynamic directive
-$this->engine->setDirective('coloredText', function($text, $color){
-	return "<span style='color: {$color}'>{$text}</span>";
-});
-
-// process template - we can set different text color for each call
-$result = $this->engine->render("this is {{ output | coloredText(yellow) }}", [
-	'output' => 'colored text',
-]);
-// output: "this is <span style='color: yellow'>colored text</span>"
-```
-
-
-Tips
-====
+Tips & notes
+============
 
 * see `tests/TemplateEngineTest.php` for more examples
 * Running tests via phpunit on [NuSphere's PhpEd](http://www.nusphere.com/) in debug mode:
@@ -221,8 +261,18 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 }
 ~~~
 
+* the Yii-dependency can be easily dropped so the engine can be used as a standalone renderer.
+
+
 Changelog
 =========
+
+1.0.1, released 2021-12-30
+--------------------------
+
+* fix tests for PHP 7.0 - 8.0
+* improved documentation
+
 
 1.0.0, released 2021-12-13
 --------------------------
