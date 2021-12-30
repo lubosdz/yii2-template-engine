@@ -76,7 +76,7 @@ $html = $engine->render('Generated on {{ today }} at {{ time }}.');
 // output - respecting SK/CS locale: "Generated on 31. 12. 2021 at 23:59."
 
 echo $engine->render('Meet me at {{ now(7200) | time }}.');
-// output example, if now is 8:30am: "Let's meet at 10:30am." (shift +2 hours = 7200 secs)
+// output example, if now is 8:30am: "Meet me at 10:30am." (shift +2 hours = 7200 secs)
 
 echo $engine->render('My name is {{ user.name | escape }}.', ['user' => [
 	'name' => '<John>',
