@@ -279,6 +279,12 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 Changelog
 =========
 
+1.0.2, released 2022-02-01
+--------------------------
+
+* fix compatability for PHP 8.1
+
+
 1.0.1, released 2021-12-30
 --------------------------
 
