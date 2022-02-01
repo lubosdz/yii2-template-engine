@@ -30,5 +30,10 @@
 		"psr-4": {
 			"lubosdz\\yii2\\": "src"
 		}
+	},
+	"config": {
+		"allow-plugins": {
+			"yiisoft/yii2-composer": true
+		}
 	}
 }

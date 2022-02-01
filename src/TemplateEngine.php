@@ -471,7 +471,7 @@ class TemplateEngine
 		preg_match_all('/([\w]+\.[\w]+)/i', $expr, $match);
 		if(!empty($match[0])){
 			foreach($match[0] as $directive){
-				$val = $this->processDirective($directive, $paramsValid);
+				$val = (string) $this->processDirective($directive, $paramsValid);
 				if(!is_numeric($val) || trim($val) === ""){
 					$val = '"'.trim($val, '"').'"'; // fix eval crash: null -> ""
 				}
@@ -483,7 +483,7 @@ class TemplateEngine
 		foreach($paramsValid as $key => $val){
 			if (!is_object($val) && !is_array($val)) {
 				//if(!is_numeric($val) || trim($val) === ""){
-				if (trim($val) !== "") {
+				if (trim( (string) $val) !== "") {
 					if (!is_numeric($val)) {
 						$val = '"'.trim($val, '"').'"'; // fix eval crash: null -> ""
 					}
@@ -495,7 +495,7 @@ class TemplateEngine
 						$val = floatval($val); // fix eval crash: null -> 0 in formulas
 					} else {
 						// probably not formula - cast to string
-						$val = '"'.trim($val, '"').'"'; // fix eval crash: null -> "" for strings
+						$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> "" for strings
 					}
 				}
 				$map[$key] = $val;

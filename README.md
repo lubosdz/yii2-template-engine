@@ -6,13 +6,24 @@ Supports basic control structures (IF, FOR, SET), dynamic directives and active 
 It is similar to [Twig](https://twig.symfony.com/) or [Blade](https://laravel.com/docs/8.x/blade), though much simpler.
 
 It can be used to render e.g. an invoice or a contract from HTML markup edited in a WYSIWYG editor and turn it optionally into a PDF or MS Word file.
+Generic version without framework dependency can be found at [lubosdz/html-templating-engine](https://github.com/lubosdz/html-templating-engine).
 
 
 Installation
 ============
 
 ```bash
-$ composer require "lubosdz/yii2-template-engine : ~1.0"
+$ composer require "lubosdz/yii2-template-engine"
+```
+
+or via `composer.json`:
+
+```bash
+"require": {
+	...
+	"lubosdz/yii2-template-engine": "^1.0",
+	...
+},
 ```
 
 
@@ -22,7 +33,8 @@ Basic usage
 Initiate template engine inside Yii application:
 
 ~~~php
-$engine = new \lubosdz\yii2\TemplateEngine;
+use lubosdz\yii2\TemplateEngine;
+$engine = new TemplateEngine();
 ~~~
 
 or register as a component in `app/config/main.php`:
