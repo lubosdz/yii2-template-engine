@@ -158,12 +158,21 @@ class TemplateEngine
 	/**
 	* Replace placeholders
 	* Note: this is recursively called method
-	* @param string $html HTML to be processed
+	* @param string $html HTML to be processed. This can be also path alias starting with "@" e.g. "@app/templates/invoice.html"
 	* @param array $params List of params - AR objects, arrays or non-numeric scalars
 	* @param bool $resetGlobalVars Clear already parsed global directives
 	*/
 	public function render($html, array $values = [], $resetGlobalVars = true)
 	{
+		if('@' == substr($html, 0, 1)){
+			// load HTML from path alias, file must exist
+			$path = Yii::getAlias($html);
+			if(!is_file($path)){
+				throw new HttpException(404, Yii::t('app', 'File not found in "{path}".', ['path' => $path]));
+			}
+			$html = file_get_contents($path);
+		}
+
 		if(null === $this->resHtml){
 			// keep only the very first supplied HTML source
 			$this->resHtml = $html;

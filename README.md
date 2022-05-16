@@ -53,8 +53,8 @@ $engine = Yii::$app->template;
 
 Use method `$engine->render($html [, $values])` to generate HTML output:
 
-* $html = source HTML markup with placeholders like `<h1>{{ processMe }}</h1>`
-* $values = array of values like pairs `[processMe => value]` to be injected into or evaluated inside placeholders
+* $html = source HTML markup with placeholders like `<h1>{{ processMe }}</h1>`. This argument can be also path alias starting with `@` to load existing HTML file, such as `@app/templates/invoice.html`
+* $values = array of values like pairs `[placeholderName => value]` to be injected into or evaluated inside placeholders
 
 Once output generated, it can be e.g. supplied to [PDF](https://github.com/tecnickcom/TCPDF) or [MS Word](https://github.com/PHPOffice/PHPWord) renderer to produce a PDF or MS Word file respectively.
 
@@ -278,6 +278,12 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 
 Changelog
 =========
+
+1.0.3, ... under development
+--------------------------
+
+* added support for loading HTML via path alias, e.g. `$engine->render('@app/templates/invoice.html', $data)`
+
 
 1.0.2, released 2022-02-01
 --------------------------
