@@ -1,0 +1,37 @@
+
+<!-- this is HTML fixture sample template for rendering invoice via https://github.com/lubosdz/yii2-template-engine -->
+
+<h2>Rendering invoice via file template for customer #{{customer.id}} on {{ today }}  ...</h2>
+
+<table class="table">
+
+{{ for item in items }}
+
+	{{ SET subtotal = item.qty * item.priceNetto * (100 + item.vatPerc) / 100 }}
+
+	{{ if loop.first }}
+		{{ SET note = "FIRST LOOP" }}
+	{{ elseif loop.last }}
+		{{ SET note = "LAST LOOP" }}
+	{{ elseif loop.index > 1 }}
+		{{ SET note = "NOT FIRST NOR LAST LOOP" }}
+	{{ endif }}
+
+	<tr>
+		<td> #{{ loop.index }} - {{ note }}</td>
+		<td> {{ item.description }} </td>
+		<td> {{ item.qty }} </td>
+		<td> {{ item.priceNetto | round(2) }} </td>
+		<td> {{ item.vatPerc | round(2) }}% </td>
+		<td> {{ subtotal | round(2) }} &euro; </td>
+	</tr>
+
+	{{ SET total = total + subtotal }}
+
+{{ elsefor }}
+	EMPTY ITEM #{{ loop.index }} !!
+{{ endfor }}
+
+</table>
+
+<p>Amount due: <b> {{ total | round(2) }} Eur </b></p>

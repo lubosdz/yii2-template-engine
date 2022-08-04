@@ -1,7 +1,7 @@
 <?php
 /**
 * Tests for Yii2 templating engine
-* Tests pass for PHP 7.0 - 8.0
+* Tests passing PHP 7.0 - 8.1
 */
 
 use lubosdz\yii2\TemplateEngine;
@@ -273,6 +273,18 @@ HTML;
 			&& false !== strpos($resultHtml, '#4 - LAST LOOP') // properly detected last item
 			&& false !== strpos($resultHtml, '<p>Amount due: <b> 40.00 Eur </b></p>') // expected total due amount
 		);
+
+		// same output via loading extern file, alias @templates is defined in app config - see mockApp() bellow
+		$resultHtml = $engine->render('@templates/_invoice.tpl.html', $params);
+
+		$this->assertTrue(
+			   false !== strpos($resultHtml, 'via file template') // specific string
+			&& false !== strpos($resultHtml, 'customer #123') // translated model attributes
+			&& false === strpos($resultHtml, '{{') // all placeholders translated
+			&& false !== strpos($resultHtml, '#4 - LAST LOOP') // properly detected last item
+			&& false !== strpos($resultHtml, '<p>Amount due: <b> 40.00 Eur </b></p>') // expected total due amount
+		);
+
 	}
 
 	/**
@@ -295,7 +307,11 @@ HTML;
 					'template' => [
 						'class' => 'lubosdz\yii2\TemplateEngine',
 					]
-				]
+				],
+
+				'aliases' => [
+					'@templates' => __DIR__
+				],
 			];
 		}
 

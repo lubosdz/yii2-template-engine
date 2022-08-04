@@ -54,7 +54,7 @@ $engine = Yii::$app->template;
 Use method `$engine->render($html [, $values])` to generate HTML output:
 
 * $html = source HTML markup with placeholders like `<h1>{{ processMe }}</h1>`. This argument can be also path alias starting with `@` to load existing HTML file, such as `@app/templates/invoice.html`
-* $values = array of values like pairs `[placeholderName => value]` to be injected into or evaluated inside placeholders
+* $values = array of values like pairs `[processMe => value]` to be injected into or evaluated inside placeholders
 
 Once output generated, it can be e.g. supplied to [PDF](https://github.com/tecnickcom/TCPDF) or [MS Word](https://github.com/PHPOffice/PHPWord) renderer to produce a PDF or MS Word file respectively.
 
@@ -206,11 +206,11 @@ $html = $engine->render($templateHtml, $values);
 
 Following auxiliary variables are accessible inside each loop:
 
-* `index` .. (int) 1-based iteration counter
-* `index0` .. (int) 0-based iteration counter
-* `length` .. (int) total number of items/iterations
-* `first` .. (bool) true on first iteration
-* `last` .. (bool) true on last iteration
+* `loop.index` .. (int) 1-based iteration counter
+* `loop.index0` .. (int) 0-based iteration counter
+* `loop.length` .. (int) total number of items/iterations
+* `loop.first` .. (bool) true on first iteration
+* `loop.last` .. (bool) true on last iteration
 
 
 
@@ -279,26 +279,27 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 Changelog
 =========
 
-1.0.3, ... under development
+1.0.3 - released 2022-08-04
 --------------------------
 
 * added support for loading HTML via path alias, e.g. `$engine->render('@app/templates/invoice.html', $data)`
+* minor documentation improvements
 
 
-1.0.2, released 2022-02-01
+1.0.2 - released 2022-02-01
 --------------------------
 
 * fix compatability for PHP 8.1
 
 
-1.0.1, released 2021-12-30
+1.0.1 - released 2021-12-30
 --------------------------
 
 * fix tests for PHP 7.0 - 8.0
 * improved documentation
 
 
-1.0.0, released 2021-12-13
+1.0.0 - released 2021-12-13
 --------------------------
 
 * initial release
