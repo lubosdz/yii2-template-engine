@@ -1,7 +1,7 @@
 <?php
 /**
 * Tests for Yii2 templating engine
-* Tests passing PHP 7.0 - 8.1
+* Tests passing PHP 7.0 - 8.2
 */
 
 use lubosdz\yii2\TemplateEngine;
@@ -14,21 +14,19 @@ class TemplateEngineTest extends TestCase
 	/**
 	* Run before each test is started
 	* We intentionally avoid setUp() because it requires different syntax depending on PHP version:
-	* - PHP 8.1 requires parent's compatible syntax, means adding return type : void
+	* - PHP 8.1+ requires parent's compatible syntax, means adding return type : void
 	* - PHP 7.1 - 8.0 will run, void supported
 	* - PHP 7.0 - does not recognize void
 	* We want simply run tests on any version 7.0+ without adjusting the code.
-	* Return types are not needed, neither strict mode.
+	* Return types are not needed, neither strict mode
 	*/
 	protected function setUpIndependentOfPhpVersion()
-	//protected function setUp() : void
 	{
 		// initiate static property Yii::$app
 		self::mockApp();
 
 		// init templating engine - either via namespace or as Yii component
 		$this->engine = new TemplateEngine;
-		//$this->engine = Yii::$app->template; // works too
 
 		// turn off logging since we dont have database setup for tests
 		$this->engine->setLogErrors(false);
@@ -173,7 +171,7 @@ HTML;
 
 		$html = <<<HTML
 {{ if condition == 5 && customer.id > 0 }}
-	MATCH #1 - CONDITION IS EXACTLY 5 for customer ID. {{ customer.id }} created on {{ customer.created_datetime | date }}.
+	MATCH #1 - CONDITION IS EXACTLY 5 for customer ID. {{ customer.id }} created on {{ customer.datetime_created | date }}.
 {{ elseif condition > 5 }}
 	MATCH #2 - CONDITION IS OVER 5.
 {{ elseif condition < 0 }}

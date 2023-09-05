@@ -1,17 +1,21 @@
 <?php
 /**
-* Copyright (c) 2019 - 2021 Lubos Dzurik (https://github.com/lubosdz)
+* Copyright (c) 2021 - 2023 Lubos Dzurik (https://github.com/lubosdz)
 * Template rendering engine for PHP framework Yii ver. 2 (https://www.yiiframework.com/).
 *
 * Sample:
 *   "Your order #{{order.id}} has been accepted on {{ order.created_datetime | date }}."
 * will translate into:
-*   "Your order #123 has been accepted on 20.08.2020."
+*   "Your order #123 has been accepted on 20.08.2023."
 *
 * Supported structures:
 *  - IF .. ELSEIF .. ELSE .. ENDIF
 *  - FOR ... ELSEFOR .. ENDFOR
 *  - SET variable = expression
+*
+* Github repos:
+*  - https://github.com/lubosdz/yii2-template-engine
+*  - https://github.com/lubosdz/html-templating-engine
 */
 
 namespace lubosdz\yii2;
@@ -37,22 +41,32 @@ class TemplateEngine
 	/** @var array List of dynamic directives */
 	protected $dynDir = [];
 
-	/** @var bool Whether to log parsing errors */
+	/**
+	* @var bool Whether to log parsing errors
+	*/
 	protected $logErrors = true;
 
 	/**
-	* @var bool Whether to remove placeholder (replace with empty string) if no replacement data found.
-	* E.g. false in development, true in production.
+	* @var bool|string Whether to remove placeholder (replace with empty string) if no replacement value found
+	*  - if set as a string, such a string will be used as a replacement value
+	*  - if set as a boolean TRUE, then empty string "" will be used as a replacement value
+	*  - if set as a boolean FALSE, no replacement occurs and original placeholder will render, e.g. {{ missing_value }}
 	*/
 	protected $forceReplace = false;
 
-	/** @var array Variables parsed & evaluated by SET directive */
+	/**
+	* @var array Variables parsed & evaluated by SET directive
+	*/
 	protected $globalVars = [];
 
-	/** @var array List of processing errors, will be logged automatically */
+	/**
+	* @var array List of processing errors, will be logged automatically
+	*/
 	protected $errors = [];
 
-	/** @var \yii\i18n\Formatter Used by date/time directives */
+	/**
+	* @var \yii\i18n\Formatter Just a shorthand for quick access
+	*/
 	protected $formatter;
 
 	/**
@@ -110,11 +124,12 @@ class TemplateEngine
 	}
 
 	/**
-	* @param bool $remove Whether to remove placeholder if variable not defined or error ocuurs
+	* @param bool|string $replace Whether to remove placeholders if variable not defined or error occurs
+	* 		 If bool TRUE, missed splaceholder will have value NULL, if string "...." then missed placeholders will become "...."
 	*/
-	public function setForceReplace($force)
+	public function setForceReplace($replace)
 	{
-		$this->forceReplace = $force ? true : false;
+		$this->forceReplace = $replace;
 		return $this;
 	}
 
@@ -164,10 +179,10 @@ class TemplateEngine
 	*/
 	public function render($html, array $values = [], $resetGlobalVars = true)
 	{
-		if('@' == substr($html, 0, 1)){
+		if ('@' == substr($html, 0, 1)) {
 			// load HTML from path alias, file must exist
 			$path = Yii::getAlias($html);
-			if(!is_file($path)){
+			if (!is_file($path)) {
 				throw new HttpException(404, Yii::t('app', 'File not found in "{path}".', ['path' => $path]));
 			}
 			$html = file_get_contents($path);
@@ -261,14 +276,17 @@ class TemplateEngine
 	{
 		$outModels = $outScalarsArrays = [];
 
-		foreach($params as $key => $model){
-			if($model instanceOf \yii\base\Model){
+		foreach ($params as $key => $model) {
+			if ($model instanceOf \yii\base\Model) {
 				// extract objects with attributes (active records & model forms)
 				$name = is_numeric($key) ? self::getShortClassname($model) : strtolower($key);
 				$outModels[$name] = $model;
-			}elseif(!is_numeric($key) && (is_scalar($model) || is_array($model))){
+			} elseif (!is_numeric($key) && (is_scalar($model) || is_array($model))) {
 				// primitives with named keys, e.g. 'topLabel' => 'Client name'
 				$outScalarsArrays[$key] = $model;
+			} elseif ($model === null) {
+				// register also null values, which will be replaced later
+				$outScalarsArrays[$key] = null;
 			}
 		}
 
@@ -284,27 +302,29 @@ class TemplateEngine
 	{
 		$map = [];
 
-		foreach($placeholders as $place => $directives){
+		foreach ($placeholders as $place => $directives) {
 			$val = null; // default NULL - means not replaced (e.g. expression syntax error, invalid variable name etc.)
 			$paramsValid = array_merge($paramsValid, $this->globalVars);
 
-			if(preg_match('/^{{\s*if\s+/i', $directives)){
+			if (preg_match('/^{{\s*if\s+/i', $directives)) {
 				$val = $this->parseAndEvalIf($directives, $paramsValid);
-			}elseif(preg_match('/^{{\s*for\s+/i', $directives)){
+			} elseif (preg_match('/^{{\s*for\s+/i', $directives)) {
 				$val = $this->parseAndEvalFor($directives, $paramsValid);
-			}elseif(preg_match('/^\s*set\s+/i', $directives)){
+			} elseif (preg_match('/^\s*set\s+/i', $directives)) {
 				$val = $this->parseAndEvalSet($directives, $paramsValid);
-			}else{
+			} else {
 				$directives = explode('|', $directives);
-				foreach($directives as $directive){
+				foreach ($directives as $directive) {
 					$val = $this->processDirective($directive, $paramsValid, $val);
 				}
 			}
 
 			// NULL means no replacement occured (usually error) - keep original placeholder for quick identification
 			// normally is returned empty string "" for empty values or 0 for numeric
-			if(null !== $val || $this->forceReplace){
+			if (null !== $val) {
 				$map[$place] = $val;
+			} elseif (false !== $this->forceReplace) {
+				$map[$place] = is_bool($this->forceReplace) ? "" : $this->forceReplace;
 			}
 		}
 
@@ -322,7 +342,7 @@ class TemplateEngine
 		// e.g. "order.price|round(2)" or "car.car_title"
 		$args = explode('(', trim($directive));
 		$directive = array_shift($args);
-		$directive = trim($directive); // fix spaces between arguments e.g. round    (2)
+		$directive = trim($directive); // fix spaces between arguments e.g. "round  (2)"
 		$args = $args ? trim(implode($args), "() \n,;") : null;
 
 		if (false !== strpos($directive, '.')) {
@@ -337,33 +357,32 @@ class TemplateEngine
 			$val = $paramsValid[$directive];
 		} elseif(method_exists($this, 'dir_'.$directive)) {
 			// implemented functions / directives
-			if($args !== null){
+			if ($args !== null) {
 				// parse arguments, semicolon is argument separator, since it occurs less in common strings
 				$args = explode(';', $args);
 				$args = array_map('trim', $args);
 				// @todo - replace with variadics (since PHP 5.6), currently we support up to 3 arguments
-				if(1 == count($args)){
+				if (1 == count($args)) {
 					$val = call_user_func([$this, 'dir_'.$directive], $val, $args[0]);
-				}elseif(2 == count($args)){
+				} elseif (2 == count($args)) {
 					$val = call_user_func([$this, 'dir_'.$directive], $val, $args[0], $args[1]);
-				}else{
+				} else {
 					$val = call_user_func([$this, 'dir_'.$directive], $val, $args[0], $args[1], $args[2]);
 				}
-			}else{
+			} else {
 				$val = call_user_func([$this, 'dir_'.$directive], $val);
 			}
-		} elseif(array_key_exists($directive, $this->dynDir)) {
+		} elseif (array_key_exists($directive, $this->dynDir)) {
 			$callable = $this->dynDir[$directive];
-			if(is_callable($callable)){
+			if (is_callable($callable)) {
 				$val = call_user_func($callable, $val, $args);
 			}
-		}
-		/* elseif(function_exists($directive)){
+		} /* elseif (function_exists($directive)) {
 			$val = call_user_func($directive, $val, $args);
 			// works, but not supported due to security considerations
 			// all supported functions should be simply implemented
 		} */
-		elseif($directive) {
+		elseif ($directive) {
 			$this->addError('Unsupported directive ['.$directive.']');
 		}
 
@@ -385,12 +404,12 @@ class TemplateEngine
 			if (!$model && !$array) {
 				if (array_key_exists($attrLower, $paramsValid) && is_object($paramsValid[$attrLower])) {
 					$model = $paramsValid[$attrLower];
-				} elseif (array_key_exists($attr, $paramsValid) && is_array($paramsValid[$attrLower])) {
+				} elseif (array_key_exists($attr, $paramsValid) && is_array($paramsValid[$attr])) {
 					$array = $paramsValid[$attr];
 				}
 			} elseif ($model && $model->hasProperty($attr)) {
 				$tmp = $model->{$attr};
-				if(is_object($tmp)){
+				if (is_object($tmp)) {
 					// set related model
 					$model = $tmp;
 				}
@@ -435,10 +454,10 @@ class TemplateEngine
 		foreach ($parts as $part) {
 			if ($part && false !== strpos($part, '}}')) {
 				list($condition, $html) = explode('}}', $part, 2);
-				if(trim($condition) != ''){
+				if (trim( (string) $condition) != '') {
 					$val = $php = ''; // ensure placeholder will be replaced even on false condition
 					$isTrue = false;
-					try{
+					try {
 						$php = $this->translateExpression($condition, $paramsValid);
 						$php = 'return '.$php.';';
 						ob_start();
@@ -453,10 +472,10 @@ class TemplateEngine
 						$this->addError("[if] ".$e->getMessage()." in expression [{$php}].\nFull directive:\n{$directive}\n");
 						return null; // don't replace placeholder - this is error
 					}
-				}else{
+				} else {
 					$isTrue = true; // last ENDIF has no condition, will always apply
 				}
-				if($isTrue && $html){
+				if ($isTrue && $html) {
 					$val = $this->render(trim($html), $paramsValid, false);
 					break;
 				}
@@ -481,8 +500,8 @@ class TemplateEngine
 		if(!empty($match[0])){
 			foreach($match[0] as $directive){
 				$val = (string) $this->processDirective($directive, $paramsValid);
-				if(!is_numeric($val) || trim($val) === ""){
-					$val = '"'.trim($val, '"').'"'; // fix eval crash: null -> ""
+				if(!is_numeric($val) || trim( (string) $val) === ""){
+					$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> ""
 				}
 				$map[$directive] = $val;
 			}
@@ -491,10 +510,9 @@ class TemplateEngine
 		// collect scalars
 		foreach($paramsValid as $key => $val){
 			if (!is_object($val) && !is_array($val)) {
-				//if(!is_numeric($val) || trim($val) === ""){
 				if (trim( (string) $val) !== "") {
 					if (!is_numeric($val)) {
-						$val = '"'.trim($val, '"').'"'; // fix eval crash: null -> ""
+						$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> ""
 					}
 				} else {
 					// ugly & unreliable workaround - fix NULL and "" to avoid f**king "non-numeric value encountered" since 7.1
@@ -554,7 +572,6 @@ class TemplateEngine
 					} elseif ($htmlElsefor) {
 						$val .= "\n".$this->render($htmlElsefor, $paramsValid, false);
 					}
-
 					++$index;
 				}
 				$val = trim($val);
@@ -588,7 +605,7 @@ class TemplateEngine
 				$paramsValid[$varName] = null;
 			}
 
-			try{
+			try {
 				$php = $this->translateExpression($expression, $paramsValid);
 				$php = 'return '.$php.';';
 				ob_start();
@@ -597,7 +614,7 @@ class TemplateEngine
 				if($err){
 					$this->addError(strip_tags($err));
 				}
-			} catch(\Throwable $e) {
+			} catch (\Throwable $e) {
 				$this->addError("[set] ".$e->getMessage()." in expression [{$php}].\nFull directive:\n{$directive}\n");
 				return null; // don't replace placeholder on parsing error
 			}
@@ -609,8 +626,24 @@ class TemplateEngine
 		return '';
 	}
 
+	/**
+	* Return true if supplied valid date or time string, including timestamp
+	* @param int|string $val e.g. 123 or "April 10, 2022", "2023-12-31", "31/12/2023" etc. but not "......" (placeholder) nor "April"
+	*/
+	protected static function isDatetimeString($val)
+	{
+		if (!$val) {
+			return false; // 0, null, "", false
+		} elseif (preg_match('/\d+/', $val) && (is_numeric($val) || strtotime($val))) {
+			// valid datetime string must contain at least one digit - either timestamp or date/time string
+			// discovered strange PHP bug (?): strtotime('......') -> 1689019109 (current timestamp)
+			return true;
+		}
+		return false;
+	}
+
 	####################################################################
-	#  Implemented global directives - prefix "dir_"
+	#  Supported global directives - prefix "dir_*"
 	#  E.g. template directive {{ myFunction(arg1) }} will look for method dir_myFunction(arg1)
 	####################################################################
 
@@ -651,10 +684,10 @@ class TemplateEngine
 	*/
 	protected function dir_date($val, $format = null)
 	{
-		if (!$val) {
-			$val = time();
+		if (!self::isDatetimeString($val)) {
+			return $val;
 		}
-		$ts = is_numeric($val) ? $val : $this->formatter->asTimestamp($val);
+		$ts = is_numeric($val) ? (int) $val : $this->formatter->asTimestamp($val);
 		$format = (null == $format) ? 'medium' : $format;
 		return $this->formatter->asDate($ts, $format);
 	}
@@ -666,10 +699,10 @@ class TemplateEngine
 	*/
 	protected function dir_time($val, $format = null)
 	{
-		if (!$val) {
-			$val = time();
+		if (!self::isDatetimeString($val)) {
+			return $val;
 		}
-		$ts = is_numeric($val) ? $val : $this->formatter->asTimestamp($val);
+		$ts = is_numeric($val) ? (int) $val : $this->formatter->asTimestamp($val);
 		$format = (null == $format) ? 'short' : $format;
 		return $this->formatter->asTime($ts, $format);
 	}
@@ -684,10 +717,10 @@ class TemplateEngine
 	*/
 	protected function dir_datetime($val, $formatDate = null, $formatTime = null, $separator = ' ')
 	{
-		if (!$val) {
-			$val = time();
+		if (!self::isDatetimeString($val)) {
+			return $val;
 		}
-		$ts = is_numeric($val) ? $val : $this->formatter->asTimestamp($val);
+		$ts = is_numeric($val) ? (int) $val : $this->formatter->asTimestamp($val);
 		$formatDate = (null == $formatDate) ? 'medium' : $formatDate;
 		$date = $this->formatter->asDate($ts, $formatDate);
 		$formatTime = (null == $formatTime) ? 'short' : $formatTime;
@@ -761,7 +794,7 @@ class TemplateEngine
 	*/
 	protected function dir_nl2br($val)
 	{
-		return nl2br(trim($val));
+		return nl2br(trim((string)$val));
 	}
 
 	/**
@@ -772,6 +805,6 @@ class TemplateEngine
 	*/
 	protected function dir_truncate($val, $length = 20, $suffix = '...')
 	{
-		return StringHelper::truncate(trim($val), $length, $suffix);
+		return StringHelper::truncate(trim((string)$val), $length, $suffix);
 	}
 }

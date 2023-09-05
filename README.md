@@ -279,27 +279,38 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 Changelog
 =========
 
+1.0.4 - released 2023-09-05
+---------------------------
+
+* support PHP 8.2
+* properly detect valid Datetime string in built-in directive
+* forceReplace now takes beside boolean also string as a replacement value
+* fixed bug - lookup lowercased AR model
+* fixed the IF-test
+* improved documentation
+
+
 1.0.3 - released 2022-08-04
---------------------------
+---------------------------
 
 * added support for loading HTML via path alias, e.g. `$engine->render('@app/templates/invoice.html', $data)`
 * minor documentation improvements
 
 
 1.0.2 - released 2022-02-01
---------------------------
+---------------------------
 
 * fix compatability for PHP 8.1
 
 
 1.0.1 - released 2021-12-30
---------------------------
+---------------------------
 
 * fix tests for PHP 7.0 - 8.0
 * improved documentation
 
 
 1.0.0 - released 2021-12-13
---------------------------
+---------------------------
 
 * initial release
