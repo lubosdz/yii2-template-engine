@@ -133,6 +133,32 @@ HTML;
 		$resultHtml = $engine->render($html, $params);
 		$expectedHtml = 'Customer created on 1-2-3 at {{ oneTwoNotReplaced }}.';
 		$this->assertTrue(false !== strpos($resultHtml, '1-2-3') && false === strpos($resultHtml, 'oneTwoNotReplaced'));
+
+		// test forced stringual placeholder since 1.0.4
+		$html = 'Evaluating ... [xxx {{ nonExistend }} yyy]';
+		$engine->setForceReplace('---');
+		$resultHtml = $engine->render($html);
+		$this->assertTrue($resultHtml == "Evaluating ... [xxx --- yyy]");
+
+		$resultHtml = $engine->render($html, ['nonExistend' => 'ooo']);
+		$this->assertTrue($resultHtml == "Evaluating ... [xxx ooo yyy]");
+
+		$resultHtml = $engine->render($html, ['nonExistendxxx' => 'ooo']);
+		$this->assertTrue($resultHtml == "Evaluating ... [xxx --- yyy]");
+
+		$resultHtml = $engine->render($html, ['nonExisten' => 'ooo']);
+		$this->assertTrue($resultHtml == "Evaluating ... [xxx --- yyy]");
+
+		$resultHtml = $engine->render($html, ['nonExistenD' => 'ooo']);
+		$this->assertTrue($resultHtml == "Evaluating ... [xxx --- yyy]");
+
+		$engine->setForceReplace('');
+		$resultHtml = $engine->render($html);
+		$this->assertTrue($resultHtml == "Evaluating ... [xxx  yyy]");
+
+		$engine->setForceReplace(false);
+		$resultHtml = $engine->render($html);
+		$this->assertTrue($resultHtml == $html);
 	}
 
 	/**

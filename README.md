@@ -3,7 +3,7 @@ Yii2 Template Engine
 
 Simple, fast and flexible HTML templating engine for [Yii2](https://www.yiiframework.com/) PHP framework with zero configuration.
 Supports basic control structures (IF, FOR, SET), dynamic directives and active record relations.
-It is similar to [Twig](https://twig.symfony.com/) or [Blade](https://laravel.com/docs/8.x/blade), though much simpler.
+It is similar to [Twig](https://twig.symfony.com/) or [Blade](https://laravel.com/docs/8.x/blade).
 
 It can be used to render e.g. an invoice or a contract from HTML markup edited in a WYSIWYG editor and turn it optionally into a PDF or MS Word file.
 Generic version without framework dependency can be found at [lubosdz/html-templating-engine](https://github.com/lubosdz/html-templating-engine).
