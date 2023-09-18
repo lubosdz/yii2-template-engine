@@ -279,6 +279,15 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 Changelog
 =========
 
+1.0.5 - released 2023-09-18
+---------------------------
+
+* support configurable argument separator (beside default semicolon ";")
+* resolve deep-tree argument key conflicts
+* added built-in directive concat, trim
+* added tests, improved documentation, typehints
+
+
 1.0.4 - released 2023-09-05
 ---------------------------
 

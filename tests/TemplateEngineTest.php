@@ -134,7 +134,7 @@ HTML;
 		$expectedHtml = 'Customer created on 1-2-3 at {{ oneTwoNotReplaced }}.';
 		$this->assertTrue(false !== strpos($resultHtml, '1-2-3') && false === strpos($resultHtml, 'oneTwoNotReplaced'));
 
-		// test forced stringual placeholder since 1.0.4
+		// test forced stringual placeholder
 		$html = 'Evaluating ... [xxx {{ nonExistend }} yyy]';
 		$engine->setForceReplace('---');
 		$resultHtml = $engine->render($html);
@@ -159,6 +159,46 @@ HTML;
 		$engine->setForceReplace(false);
 		$resultHtml = $engine->render($html);
 		$this->assertTrue($resultHtml == $html);
+
+		// concatenate
+		$html = 'This is {{ concat(customer.name) | concat("with contact email") | concat(customer.email) }}.';
+		$result = $engine->render($html, $params);
+		$expected = "This is John Doe with contact email john@doe.com.";
+		$this->assertTrue($result == $expected);
+
+		$html = 'This is {{ concat(customer.name; unescapedChars) }}.';
+		$result = $engine->render($html, $params);
+		$expected = "This is John Doe."; // invalid and improperly quoted argument is ignored
+		$this->assertTrue($result == $expected);
+
+		$html = 'This is {{ concat(customer.name) | concat("our great hero"; " - ") }}!';
+		$result = $engine->render($html, $params);
+		$expected = "This is John Doe - our great hero!";
+		$this->assertTrue($result == $expected);
+
+		// alternate argument separator
+		$html = 'This is <b>{{ concat("AAA"; "-") | concat(\'BBB\', \'+\') }}</b>';
+		$result = $engine->render($html);
+		$this->assertTrue($result == "This is <b>AAA</b>"); // BBB is ignored due to wrong comma separator [,]
+
+		$engine->setArgSeparator(',');
+		$result = $engine->render($html);
+		$this->assertTrue($result == "This is <b>BBB</b>"); // AAA is ignored due to invalid comma separator [,]
+
+		// restore arg separator
+		$engine->setArgSeparator(';');
+
+		// trim
+		$client->name = '+-   John Doe   +-';
+		$html = ' aaa {{ customer.name }} bbb ';
+		$result = $engine->render($html, $params);
+		$expected = " aaa +-   John Doe   +- bbb ";
+		$this->assertTrue($result == $expected);
+
+		$html = ' aaa {{ customer.name | trim(+-) }} bbb ';
+		$result = $engine->render($html, $params);
+		$expected = " aaa    John Doe    bbb ";
+		$this->assertTrue($result == $expected);
 	}
 
 	/**
