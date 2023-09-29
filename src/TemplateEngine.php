@@ -97,7 +97,6 @@ class TemplateEngine
 
 	/**
 	* Return collected errors
-	* @return TemplateEngine
 	*/
 	public function getErrors()
 	{
@@ -256,29 +255,29 @@ class TemplateEngine
 		$all = [];
 		$offset = 0;
 
-		while(false !== ($pos1 = strpos($html, '{{', $offset))){
+		while (false !== ($pos1 = strpos($html, '{{', $offset))) {
 			$pos2 = strpos($html, '}}', $pos1);
-			if($pos2 && $pos2 > $pos1){
+			if ($pos2 && $pos2 > $pos1) {
 				$placeholder = substr($html, $pos1, $pos2 - $pos1 + 2);
 
-				if(preg_match('/^{{\s*if\s+(.+)}}/i', $placeholder)){
+				if (preg_match('/^{{\s*if\s+(.+)}}/i', $placeholder)) {
 					// parse {{ IF .. ELSEIF .. ELSE .. ENDIF }}
 					$pos2 = stripos($html, 'endif', $pos1);
-					if($pos2 && ($pos2 = stripos($html, '}}', $pos2))){
+					if ($pos2 && ($pos2 = stripos($html, '}}', $pos2))) {
 						$placeholder = substr($html, $pos1, $pos2 - $pos1 + 2);
 					}
 					$trimPattern = " \n"; // keep curly brackets for easier parsing
-				}elseif(preg_match('/^{{\s*for\s+(.+)}}/i', $placeholder)){
+				} elseif (preg_match('/^{{\s*for\s+(.+)}}/i', $placeholder)) {
 					// parse {{ FOR .. ELSEFOR .. ENDFOR }}
 					$pos2 = stripos($html, 'endfor', $pos1);
-					if($pos2 && ($pos2 = stripos($html, '}}', $pos2))){
+					if ($pos2 && ($pos2 = stripos($html, '}}', $pos2))) {
 						$placeholder = substr($html, $pos1, $pos2 - $pos1 + 2);
 					}
 					$trimPattern = " \n"; // keep curly brackets for easier parsing
-				}elseif(preg_match('/^{{\s*set\s+(.+)=(.+)/i', $placeholder)){
+				} elseif (preg_match('/^{{\s*set\s+(.+)=(.+)/i', $placeholder)) {
 					// parse {{ SET variable = expression }}
 					$trimPattern = " {}\n";
-				}else{
+				} else {
 					// any placeholder e.g. "order.id", "variableName" or "order.created | date"
 					$trimPattern = " {}\n";
 				}
@@ -287,7 +286,7 @@ class TemplateEngine
 				$val = str_replace('&nbsp;', ' ', $placeholder);
 				$all[$placeholder] = trim($val, $trimPattern);
 				$offset = $pos2 + 2;
-			}else{
+			} else {
 				$offset = $pos1 + 2;
 			}
 		}
@@ -380,10 +379,10 @@ class TemplateEngine
 				$val .= ' '.$tmp;
 				$val = trim($val);
 			}
-		} elseif(array_key_exists($directive, $paramsValid)) {
+		} elseif (array_key_exists($directive, $paramsValid)) {
 			// replace scalar value
 			$val = $paramsValid[$directive];
-		} elseif(method_exists($this, 'dir_'.$directive)) {
+		} elseif (method_exists($this, 'dir_'.$directive)) {
 			// implemented functions / directives
 			if ($args !== null) {
 				// parse arguments, semicolon is argument separator, since it occurs less in common strings
@@ -799,6 +798,8 @@ class TemplateEngine
 	*/
 	protected function dir_round($val, $decimals = 2)
 	{
+		// fix: convert to proper PHP format, e.g. "12 456,99" => 12456.99
+		$val = (float) strtr(trim( (string) $val), [' ' => '', ',' => '.']);
 		return $this->formatter->asDecimal($val, $decimals);
 	}
 
