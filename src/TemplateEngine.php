@@ -16,12 +16,13 @@
 *  - IF .. ELSEIF .. ELSE .. ENDIF
 *  - FOR ... ELSEFOR .. ENDFOR
 *  - SET variable = expression
+*  - IMPORT subtemplate
 *  - dynamic custom directives
 *  - built-in most common directives and date/time formatter
 *
 * Github repos:
 *  - https://github.com/lubosdz/yii2-template-engine
-*  - https://github.com/lubosdz/html-templating-engine
+*  - https://github.com/lubosdz/html-templating-engine (alternative without dependencies and without yii2 features)
 */
 
 namespace lubosdz\yii2;
@@ -64,6 +65,11 @@ class TemplateEngine
 	* @var string Argument separator, defaults to semicolon [;]
 	*/
 	protected $argSeparator = ';';
+
+	/**
+	* @var string Absolute path to directory with templates
+	*/
+	protected $dirTemplates;
 
 	/**
 	* @var array Variables parsed & evaluated by SET directive
@@ -160,6 +166,28 @@ class TemplateEngine
 	}
 
 	/**
+	* Set path to directory with templates
+	* @param string $path Abs. path to valid directory
+	* @return TemplateEngine
+	*/
+	public function setDirTemplates($path)
+	{
+		if(!is_dir($path)){
+			throw new HttpException(404, Yii::t('app', 'Invalid directory "{path}".', ['path' => $path]));
+		}
+		$this->dirTemplates = realpath($path);
+		return $this;
+	}
+
+	/**
+	* Return path to directory with templates
+	*/
+	public function getDirTemplates()
+	{
+		return $this->dirTemplates;
+	}
+
+	/**
 	* Set arbitrary dynamic directive, e.g. this is {{ output | coloredText(yellow) }}
 	* @param string $name
 	* @param callable $callable
@@ -210,8 +238,11 @@ class TemplateEngine
 			// load HTML from path alias, file must exist
 			$path = Yii::getAlias($html);
 			if (!is_file($path)) {
-				throw new HttpException(404, Yii::t('app', 'File not found in "{path}".', ['path' => $path]));
+				throw new HttpException(404, Yii::t('app', 'Template file not found in "{path}".', ['path' => $path]));
 			}
+			// set parent directory
+			$this->setDirTemplates(dirname($path));
+			// load content to process
 			$html = file_get_contents($path);
 		}
 
@@ -339,6 +370,8 @@ class TemplateEngine
 				$val = $this->parseAndEvalFor($directives, $paramsValid);
 			} elseif (preg_match('/^\s*set\s+/i', $directives)) {
 				$val = $this->parseAndEvalSet($directives, $paramsValid);
+			} elseif (preg_match('/^\s*import\s+/i', $directives)) {
+				$val = $this->parseAndEvalImport($directives, $paramsValid);
 			} else {
 				$directives = explode('|', $directives);
 				foreach ($directives as $directive) {
@@ -659,6 +692,38 @@ class TemplateEngine
 
 		// SET has no output, return empty string instead of NULL to ensure placeholder will be replaced
 		return '';
+	}
+
+	/**
+	* Import partial template from current template directory
+	* @param string $file The file name or relative path to valid template directory e.g. "partial.html" or in subdirectory "partial/header.html".
+	* @param array $paramsValid
+	*/
+	protected function parseAndEvalImport($directive, array $paramsValid)
+	{
+		$html = '';
+		$file = preg_split("/\s+/", $directive);
+
+		if(!empty($file[1])){
+			// validate against template directory
+			$file = trim($file[1]);
+			if(!$this->dirTemplates){
+				throw new HttpException(500, Yii::t('app', 'Please set template directory.'));
+			}
+			$path = $this->dirTemplates .'/'. ltrim($file, ' \/.');
+			if(false === strpos($path, basename($this->dirTemplates))){
+				throw new HttpException(500, Yii::t('app', 'Template path "{path}" may not point out of template directory "{dir}".', [
+					'path' => $path,
+					'dir' => $this->dirTemplates,
+				]));
+			}elseif(!is_file($path)){
+				throw new HttpException(404, Yii::t('app', 'Template file not found in "{path}".', ['path' => $path]));
+			}
+			$html = file_get_contents($path);
+			$html = $this->render($html, $paramsValid, false);
+		}
+
+		return $html;
 	}
 
 	/**

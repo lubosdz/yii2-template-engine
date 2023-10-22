@@ -338,17 +338,30 @@ HTML;
 			&& false !== strpos($resultHtml, '<p>Amount due: <b> 40.00 Eur </b></p>') // expected total due amount
 		);
 
-		// same output via loading extern file, alias @templates is defined in app config - see mockApp() bellow
-		$resultHtml = $engine->render('@templates/_invoice.tpl.html', $params);
+		// output via loading extern file "_invoice.html"
+		// alias @templates is defined in app config - see mockApp() bellow
+		// this will also include invoice header from separate partial template "_invoice_header.html"
+		$params += [
+			// dot and array notations - both are valid
+			'supplier.name' => 'My Supplier, Ltd.',
+			'supplier.address' => 'Supplier Rd. 123<br> London<br> NW4 E44',
+			/*
+			'supplier' => [
+				'name' => 'My Supplier, Ltd.',
+				'address' => 'Supplier Rd. 123, London, NW4 E44',
+			],
+			*/
+		];
+		$resultHtml = $engine->render('@templates/_invoice.html', $params);
 
 		$this->assertTrue(
 			   false !== strpos($resultHtml, 'via file template') // specific string
+			&& false !== strpos($resultHtml, 'My Supplier, Ltd.') // imported header
 			&& false !== strpos($resultHtml, 'customer #123') // translated model attributes
 			&& false === strpos($resultHtml, '{{') // all placeholders translated
 			&& false !== strpos($resultHtml, '#4 - LAST LOOP') // properly detected last item
-			&& false !== strpos($resultHtml, '<p>Amount due: <b> 40.00 Eur </b></p>') // expected total due amount
+			&& false !== strpos($resultHtml, '<b>40.00 &euro;</b>') // expected total due amount
 		);
-
 	}
 
 	/**
@@ -391,6 +404,7 @@ class Customer extends \yii\base\Model
 	public $id = 123;
 	public $name = 'John Doe';
 	public $email = 'john@doe.com';
+	public $address = 'Customer Rd. 321<br> Cambridge<br> EW9 X40';
 	public $datetime_created;
 
 	public function init()

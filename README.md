@@ -2,10 +2,11 @@ Yii2 Template Engine
 ====================
 
 Simple, fast and flexible HTML templating engine for [Yii2](https://www.yiiframework.com/) PHP framework with zero configuration.
-Supports basic control structures (IF, FOR, SET), dynamic directives and active record relations.
-It is similar to [Twig](https://twig.symfony.com/) or [Blade](https://laravel.com/docs/8.x/blade).
+Supports basic control structures (IF, FOR, SET), importing subtemplates (IMPORT), piped and dynamic directives, active record (AR) relations and deep nested arrays.
+It is similar to [Twig](https://twig.symfony.com/) or [Blade](https://laravel.com/docs/8.x/blade), however with less overhead, no dependencies and without advanced features.
 
-It can be used to render e.g. an invoice or a contract from HTML markup edited in a WYSIWYG editor and turn it optionally into a PDF or MS Word file.
+It can be used to render e.g. an invoice from HTML markup, edited in a WYSIWYG editor and turned into PDF or MS Word file - see example bellow.
+
 Generic version without framework dependency can be found at [lubosdz/html-templating-engine](https://github.com/lubosdz/html-templating-engine).
 
 
@@ -213,7 +214,6 @@ Following auxiliary variables are accessible inside each loop:
 * `loop.last` .. (bool) true on last iteration
 
 
-
 SET command
 -----------
 
@@ -228,6 +228,34 @@ See also example under `FOR`.
 
 Note: shorthand syntax `+=` e.g. `SET total += subtotal` is NOT supported.
 
+
+IMPORT command
+--------------
+
+Allows importing another templates (subtemplates), including import of subtemplates from within subtemplates.
+For security reasons the imported subtemplate must reside inside the template directory (e.g. `header.html`) or subdirectory (e.g. `invoice/header.html`).
+This allows effective structuring and maintaing template sets.
+Attempt to load files outside of template directory will throw an error.
+
+First set template directory either explicitly or via loading template by alias:
+
+~~~php
+// set template directory root explicitly
+$engine->setDirTemplates('/abs/path/to/templates');
+
+// template directory will be set implicitly as the parent of `invoice.html`
+$engine->render('@templates/invoice.html');
+~~~
+
+Then in processed template add the `import` command:
+
+```php
+<h3>Invoice No. 20230123</h3>
+{{ import invoice_header.html }}
+{{ import invoice_body.html }}
+{{ import _partial/version_2/invoice_footer.html }}
+<p>Generated on ...</p>
+```
 
 
 Rendering PDF or MS Word files
@@ -278,6 +306,13 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 
 Changelog
 =========
+
+1.0.6 - released 2023-10-22
+---------------------------
+
+* support importing subtemplates via `{{ import file }}`
+* fix converting formatted number to a valid PHP number in directive `dir_round`
+
 
 1.0.5 - released 2023-09-18
 ---------------------------

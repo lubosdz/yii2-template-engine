@@ -1,0 +1,55 @@
+
+<!-- this is HTML fixture sample template for rendering invoice via https://github.com/lubosdz/yii2-template-engine -->
+
+<h2>Sample Invoice via file template for customer #{{customer.id}} on {{ today }}</h2>
+
+<table class="table" border="3" cellspacing="3" cellpadding="3" style="border-collapse: collapse;">
+
+	<tr>
+		<td colspan="6">
+		{{ import _invoice_header.html }}
+		</td>
+	</tr>
+
+	<tr bgcolor="#EEEEEE">
+		<td> #</td>
+		<td> Description </td>
+		<td> Qty </td>
+		<td> netto &euro; </td>
+		<td> VAT % </td>
+		<td> Subtotal &euro; </td>
+	</tr>
+
+	{{ for item in items }}
+
+		{{ SET subtotal = item.qty * item.priceNetto * (100 + item.vatPerc) / 100 }}
+
+		{{ if loop.first }}
+			{{ SET note = "FIRST LOOP" }}
+		{{ elseif loop.last }}
+			{{ SET note = "LAST LOOP" }}
+		{{ elseif loop.index > 1 }}
+			{{ SET note = "NOT FIRST NOR LAST LOOP" }}
+		{{ endif }}
+
+		<tr>
+			<td> #{{ loop.index }} - {{ note }}</td>
+			<td> {{ item.description }} </td>
+			<td align="center"> {{ item.qty }} </td>
+			<td align="right"> {{ item.priceNetto | round(2) }} </td>
+			<td align="center"> {{ item.vatPerc | round(0) }}% </td>
+			<td align="right"> <b>{{ subtotal | round(2) }} &euro;</b> </td>
+		</tr>
+
+		{{ SET total = total + subtotal }}
+
+	{{ elsefor }}
+		EMPTY ITEM #{{ loop.index }} !!
+	{{ endfor }}
+
+	<tr bgcolor="#EEEEEE">
+		<td colspan="5"><b>Amount due .. </b></td>
+		<td align="right" style="font-size: 20px;"><b>{{ total | round(2) }} &euro;</b></td>
+	</tr>
+
+</table>
