@@ -96,7 +96,9 @@ class TemplateEngine
 		// log errors at the end
 		register_shutdown_function(function(){
 			if($this->logErrors && $this->errors){
-				Yii::error("Found ".count($this->errors)." errors while processing HTML template [".StringHelper::truncate($this->resHtml, 70, 'utf-8')."]: \n".implode("\n", $this->errors), 'app.template');
+				Yii::error("Found ".count($this->errors)." errors while processing HTML template ["
+					.StringHelper::truncate($this->resHtml, 100) // we have no other identification
+					."]: \n".implode("\n", $this->errors), 'app.template');
 			}
 		});
 	}
@@ -704,19 +706,19 @@ class TemplateEngine
 		$html = '';
 		$file = preg_split("/\s+/", $directive);
 
-		if(!empty($file[1])){
+		if (!empty($file[1])) {
 			// validate against template directory
 			$file = trim($file[1]);
-			if(!$this->dirTemplates){
+			if (!$this->dirTemplates) {
 				throw new HttpException(500, Yii::t('app', 'Please set template directory.'));
 			}
 			$path = $this->dirTemplates .'/'. ltrim($file, ' \/.');
-			if(false === strpos($path, basename($this->dirTemplates))){
+			if (false === strpos($path, basename($this->dirTemplates))) {
 				throw new HttpException(500, Yii::t('app', 'Template path "{path}" may not point out of template directory "{dir}".', [
 					'path' => $path,
 					'dir' => $this->dirTemplates,
 				]));
-			}elseif(!is_file($path)){
+			} elseif (!is_file($path)) {
 				throw new HttpException(404, Yii::t('app', 'Template file not found in "{path}".', ['path' => $path]));
 			}
 			$html = file_get_contents($path);
