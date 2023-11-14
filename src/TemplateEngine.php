@@ -95,7 +95,7 @@ class TemplateEngine
 
 		// log errors at the end
 		register_shutdown_function(function(){
-			if($this->logErrors && $this->errors){
+			if ($this->logErrors && $this->errors) {
 				Yii::error("Found ".count($this->errors)." errors while processing HTML template ["
 					.StringHelper::truncate($this->resHtml, 100) // we have no other identification
 					."]: \n".implode("\n", $this->errors), 'app.template');
@@ -128,7 +128,7 @@ class TemplateEngine
 	*/
 	protected function addError($txt)
 	{
-		if($this->logErrors){
+		if ($this->logErrors) {
 			$this->errors[] = $txt;
 		}
 		return $this;
@@ -174,7 +174,7 @@ class TemplateEngine
 	*/
 	public function setDirTemplates($path)
 	{
-		if(!is_dir($path)){
+		if (!is_dir($path)) {
 			throw new HttpException(404, Yii::t('app', 'Invalid directory "{path}".', ['path' => $path]));
 		}
 		$this->dirTemplates = realpath($path);
@@ -219,7 +219,7 @@ class TemplateEngine
 			$this->resHtml
 		];
 
-		if($reset){
+		if ($reset) {
 			$this->resMap = $this->resPlaceholders = $this->resValues = [];
 			$this->resHtml = null;
 		}
@@ -248,28 +248,28 @@ class TemplateEngine
 			$html = file_get_contents($path);
 		}
 
-		if(null === $this->resHtml){
+		if (null === $this->resHtml) {
 			// keep only the very first supplied HTML source
 			$this->resHtml = $html;
 		}
 
-		if($html){
-			if($resetGlobalVars){
+		if ($html) {
+			if ($resetGlobalVars) {
 				$this->globalVars = [];
 			}
 
 			$placeholders = $this->collectPlaceholders($html);
-			if($placeholders){
+			if ($placeholders) {
 				$this->resPlaceholders += $placeholders;
 			}
 
 			$values = $this->collectValues($placeholders, $values);
-			if($values){
+			if ($values) {
 				$this->resValues += $values;
 			}
 
 			$map = $this->generateMap($placeholders, $values);
-			if($map){
+			if ($map) {
 				$this->resMap += $map;
 			}
 
@@ -410,7 +410,7 @@ class TemplateEngine
 		if (false !== strpos($directive, '.')) {
 			// e.g. model.attribute or model.related.attribute
 			$tmp = $this->getValue($directive, $paramsValid);
-			if($tmp !== null){
+			if ($tmp !== null) {
 				$val .= ' '.$tmp;
 				$val = trim($val);
 			}
@@ -460,7 +460,7 @@ class TemplateEngine
 	{
 		$val = null;
 
-		if(array_key_exists($directive, $paramsValid)){
+		if (array_key_exists($directive, $paramsValid)) {
 			// quick lookup directly in values tree
 			// here we also resolve conflicting keys by prioritizing keys with shallower depth within the values tree
 			$val = $paramsValid[$directive];
@@ -473,7 +473,7 @@ class TemplateEngine
 				if (!$model && !$array) {
 					if (array_key_exists($attrLower, $paramsValid) && is_object($paramsValid[$attrLower])) {
 						$model = $paramsValid[$attrLower];
-					} elseif(array_key_exists($attr, $paramsValid) && is_array($paramsValid[$attr])) {
+					} elseif (array_key_exists($attr, $paramsValid) && is_array($paramsValid[$attr])) {
 						$array = $paramsValid[$attr];
 					}
 				} elseif ($model && $model->hasProperty($attr)) {
@@ -533,7 +533,7 @@ class TemplateEngine
 						ob_start();
 						$isTrue = eval($php);
 						$err = ob_get_clean();
-						if($err){
+						if ($err) {
 							$this->addError(strip_tags($err));
 							// don't replace placeholder - usually missing (undefined) variable inside IF condition e.g. "Use of undefined constant abc - assumed 'abc'"
 							return null;
@@ -567,10 +567,10 @@ class TemplateEngine
 
 		// collect attribute / array values
 		preg_match_all('/([\w]+\.[\w]+)/i', $expr, $match);
-		if(!empty($match[0])){
-			foreach($match[0] as $directive){
+		if (!empty($match[0])) {
+			foreach ($match[0] as $directive) {
 				$val = (string) $this->processDirective($directive, $paramsValid);
-				if(!is_numeric($val) || trim($val) === "" || '0' === substr($val, 0, 1)){
+				if (!is_numeric($val) || trim($val) === "" || '0' === substr($val, 0, 1)) {
 					$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> ""
 				}
 				$map[$directive] = $val;
@@ -682,7 +682,7 @@ class TemplateEngine
 				ob_start();
 				$result = eval($php);
 				$err = ob_get_clean();
-				if($err){
+				if ($err) {
 					$this->addError(strip_tags($err));
 				}
 			} catch (\Throwable $e) {
@@ -938,7 +938,7 @@ class TemplateEngine
 		$val = (string) $val;
 		$add = '';
 
-		if(preg_match('/^["\']([^"\']+["\']$)/', $txt, $match)){
+		if (preg_match('/^["\']([^"\']+["\']$)/', $txt, $match)) {
 			// quoted string e.g. "Hello" or 'Hello', quotes must be properly enclosed
 			$add = trim($match[1], '"\'');
 		}else{
@@ -946,7 +946,7 @@ class TemplateEngine
 			$add = $this->getValue($txt, $this->resValues);
 		}
 
-		if($add){
+		if ($add) {
 			$glue = trim($glue, '\'"'); // quotes are not allowed within glue
 			$val = $val ? "{$val}{$glue}{$add}" : $add;
 		}
