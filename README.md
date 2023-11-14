@@ -307,6 +307,12 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 Changelog
 =========
 
+1.0.7 - released 2023-11-..
+---------------------------
+
+* fix eval error for numeric values starting with zero - should cast to string
+
+
 1.0.6 - released 2023-10-22
 ---------------------------
 

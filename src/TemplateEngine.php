@@ -570,7 +570,7 @@ class TemplateEngine
 		if(!empty($match[0])){
 			foreach($match[0] as $directive){
 				$val = (string) $this->processDirective($directive, $paramsValid);
-				if(!is_numeric($val) || trim( (string) $val) === ""){
+				if(!is_numeric($val) || trim($val) === "" || '0' === substr($val, 0, 1)){
 					$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> ""
 				}
 				$map[$directive] = $val;
@@ -581,7 +581,8 @@ class TemplateEngine
 		foreach($paramsValid as $key => $val){
 			if (!is_object($val) && !is_array($val)) {
 				if (trim( (string) $val) !== "") {
-					if (!is_numeric($val)) {
+					if (!is_numeric($val) || '0' === substr($val, 0, 1)) {
+						// special case - numeric starting with zero "0" are also strings
 						$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> ""
 					}
 				} else {
@@ -751,10 +752,10 @@ class TemplateEngine
 
 	/**
 	* Return current timestamp e.g. "{{ now | date }}"
-	* @param null $dummy Just args placeholder, not in use
+	* @param string $dummy Just args placeholder, not in use
 	* @param int $shiftTime Optionally shift returned time relatively to current time, e.g. "now(+7200)" will return +2 hours
 	*/
-	protected function dir_now($dummy = null, $shiftTime = 0)
+	protected function dir_now($dummy = "", $shiftTime = 0)
 	{
 		$ts = time();
 		if ($shiftTime) {
@@ -765,11 +766,11 @@ class TemplateEngine
 
 	/**
 	* Return formatted today's date e.g. "{{ today }}"
-	* @param null $dummy Just args placeholder, not in use
+	* @param string $dummy Just args placeholder, not in use
 	* @param int|float $shiftDays e.g. "today(+14)" will generate formatted date +14 days
 	* @param string $format short|medium|long
 	*/
-	protected function dir_today($dummy = null, $shiftDays = 0, $format = null)
+	protected function dir_today($dummy = "", $shiftDays = 0, $format = null)
 	{
 		$ts = time();
 		if ($shiftDays) {

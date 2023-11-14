@@ -290,7 +290,8 @@ HTML;
 				['description' => 'Item two', 'qty' => 2, 'priceNetto' => 2, 'vatPerc' => 20],
 				['description' => 'Item three', 'qty' => 3, 'priceNetto' => 3, 'vatPerc' => 30],
 				['description' => 'Item four', 'qty' => 4, 'priceNetto' => 4, 'vatPerc' => 40],
-			]
+			],
+			'var_symbol' => '0012345678', // test special case: numeric starting with zero should cast to string
 		];
 
 		$html = <<<HTML
@@ -327,6 +328,7 @@ HTML;
 </table>
 
 <p>Amount due: <b> {{ total | round(2) }} Eur </b></p>
+{{ if var_symbol }} Invoice VS: {{ var_symbol }} {{ endif }}
 HTML;
 
 		$resultHtml = $engine->render($html, $params);
@@ -336,6 +338,7 @@ HTML;
 			&& false === strpos($resultHtml, '{{') // all placeholders translated
 			&& false !== strpos($resultHtml, '#4 - LAST LOOP') // properly detected last item
 			&& false !== strpos($resultHtml, '<p>Amount due: <b> 40.00 Eur </b></p>') // expected total due amount
+			&& false !== strpos($resultHtml, $params['var_symbol']) // test leading zero in numeric param
 		);
 
 		// output via loading extern file "_invoice.html"
