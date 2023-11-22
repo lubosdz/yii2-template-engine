@@ -122,16 +122,17 @@ $html = $engine->render('Address is {{ customer.address.city }} {{ customer.addr
 Dynamic directives
 ------------------
 
-Dynamic directives allows extending functionality for chaining operations inside
-parsed placeholders. They can be added at a runtime as
-**callable anonymous functions accepting arguments**.
+Dynamic directives allow binding custom **anonymous functions** to placeholders.
+They can be added at a runtime and greatly extend flexibility of the engine in 2 steps:
+
+* define directive ie. `$engine->setDirective(directiveName, function($arg){ ... })`
+* call directive inside the placeholder ie. `{{ user.name | directiveName($arg) }}`
 
 In the following example we will attach dynamic directive named `coloredText`
 and render output with custom inline CSS:
 
-
 ```php
-// attach dynamic directive (function) accepting 2 arguments
+// attach dynamic directive (anonymous function) accepting 2 arguments
 $engine->setDirective('coloredText', function($text, $color){
 	return "<span style='color: {$color}'>{$text}</span>";
 });
@@ -232,18 +233,22 @@ Note: shorthand syntax `+=` e.g. `SET total += subtotal` is NOT supported.
 IMPORT command
 --------------
 
-Allows importing another templates (subtemplates), including import of subtemplates from within subtemplates.
-For security reasons the imported subtemplate must reside inside the template directory (e.g. `header.html`) or subdirectory (e.g. `invoice/header.html`).
+Allows importing another templates (subtemplates).
+Importing of subtemplates from within subtemplates is supported too.
+For security reasons imported subtemplate(s) must reside inside the template directory
+(e.g. `../templates/header.html`) or subdirectory (e.g. `../templates/invoice/header.html`).
 This allows effective structuring and maintaing template sets.
-Attempt to load files outside of template directory will throw an error.
+Attempt to load a template from outside of the template directory will throw an error.
 
-First set template directory either explicitly or via loading template by alias:
+First, set the template directory either explicitly or via loading template by alias:
 
 ~~~php
-// set template directory root explicitly
+// set the template directory root explicitly
 $engine->setDirTemplates('/abs/path/to/templates');
 
 // template directory will be set implicitly as the parent of `invoice.html`
+// note: engine's method "render()" supports Yii's aliases, so if supplied string
+//       starts with ampersand `@` it is assuming template absolute path
 $engine->render('@templates/invoice.html');
 ~~~
 
@@ -255,6 +260,64 @@ Then in processed template add the `import` command:
 {{ import invoice_body.html }}
 {{ import _partial/version_2/invoice_footer.html }}
 <p>Generated on ...</p>
+```
+
+
+Configuring template engine
+---------------------------
+
+Templating engine comes with most typical pre-configured settings.
+It is possible to change following:
+
+* set the argument separator in directives
+
+The engine uses by default semicolon `;` which is less common and less prone to conflict with supplied texts.
+It can be changed to more typical comma `,` by setting:
+
+```php
+$engine->setArgSeparator(",");
+
+// then use it also in placeholders and directives
+$engine->render("{{ user | truncate(5, '..') }}", ["user" => "John Doe"]);
+```
+
+Please note the the engine will ignore a placeholder for which parsing fails.
+See also [test](https://github.com/lubosdz/yii2-template-engine/blob/main/tests/TemplateEngineTest.php#L179) for detailed behaviour.
+
+
+* enable / disable errors logging
+
+By default the engine [logs errors](https://github.com/lubosdz/yii2-template-engine/blob/main/src/TemplateEngine.php#L98) into system logs.
+Typically, these may be ie. unprocessed placeholders (meaning no value supplied) or failed parsing of placeholders.
+It is highly recommended to enable this logging while development.
+However, in production it may be more desired to turn it off by setting:
+
+```php
+$engine->setLogErrors(false);
+```
+
+* replacement of empty or unprocessed placeholders
+
+By default the engine does not replace any unprocessed or empty placeholders.
+This allows collecting and logging missed placeholders for which have not been supplied values.
+By defining replacement as a string we can force the engine to insert such a string
+into the output for empty or unprocessed placeholders.
+Following are valid replacement alternatives:
+
+
+```php
+// default - do not process any empty placeholders
+$engine->setForceReplace(false);
+
+// yes, replace empty placeholders with empty string
+$engine->setForceReplace(true);
+$engine->setForceReplace("");
+
+// yes, replace empty placeholders with 5 dots
+$engine->setForceReplace(".....");
+
+// yes, replace empty placeholders with HTML entity to retain spacing
+$engine->setForceReplace("&nbsp;");
 ```
 
 
