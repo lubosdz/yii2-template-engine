@@ -123,7 +123,7 @@ Dynamic directives
 ------------------
 
 Dynamic directives allow binding custom **anonymous functions** to placeholders.
-They can be added at a runtime and greatly extend flexibility of the engine in 2 steps:
+They can be added at a runtime in 2 steps and greatly extend flexibility of the engine.
 
 * define directive ie. `$engine->setDirective(directiveName, function($arg){ ... })`
 * call directive inside the placeholder ie. `{{ user.name | directiveName($arg) }}`
@@ -144,6 +144,8 @@ echo $engine->render("This is {{ output | coloredText(yellow) }}", [
 // output: "This is <span style='color: yellow'>colored text</span>"
 ```
 
+Note: The first argument passed into dynamic directive (`$text` in the example above)
+is always the value from previous piped operation.
 
 
 IF .. ELSEIF .. ELSE .. ENDIF
@@ -264,12 +266,18 @@ Then in processed template add the `import` command:
 
 
 Configuring template engine
----------------------------
+===========================
 
 Templating engine comes with most typical pre-configured settings.
-It is possible to change following:
+In many cases it may be useful to change default behaviour.
+The engine allows changing:
 
-* set the argument separator in directives
+* argument separator in directives
+* enabling / disabling logging of errors
+* configuring replacement for empty or unprocessed placeholders
+
+Setting the argument separator in directives
+--------------------------------------------
 
 The engine uses by default semicolon `;` which is less common and less prone to conflict with supplied texts.
 It can be changed to more typical comma `,` by setting:
@@ -285,7 +293,8 @@ Please note the the engine will ignore a placeholder for which parsing fails.
 See also [test](https://github.com/lubosdz/yii2-template-engine/blob/main/tests/TemplateEngineTest.php#L179) for detailed behaviour.
 
 
-* enable / disable errors logging
+Enabling / disabling errors logging
+-----------------------------------
 
 By default the engine [logs errors](https://github.com/lubosdz/yii2-template-engine/blob/main/src/TemplateEngine.php#L98) into system logs.
 Typically, these may be ie. unprocessed placeholders (meaning no value supplied) or failed parsing of placeholders.
@@ -296,7 +305,9 @@ However, in production it may be more desired to turn it off by setting:
 $engine->setLogErrors(false);
 ```
 
-* replacement of empty or unprocessed placeholders
+
+Replacing of empty or unprocessed placeholders
+----------------------------------------------
 
 By default the engine does not replace any unprocessed or empty placeholders.
 This allows collecting and logging missed placeholders for which have not been supplied values.
