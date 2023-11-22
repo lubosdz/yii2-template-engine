@@ -289,7 +289,7 @@ $engine->setArgSeparator(",");
 $engine->render("{{ user | truncate(5, '..') }}", ["user" => "John Doe"]);
 ```
 
-Please note the the engine will ignore a placeholder for which parsing fails.
+Please note the the engine will ignore placeholders for which parsing fails.
 See also [test](https://github.com/lubosdz/yii2-template-engine/blob/main/tests/TemplateEngineTest.php#L179) for detailed behaviour.
 
 
@@ -298,7 +298,7 @@ Enabling / disabling errors logging
 
 By default the engine [logs errors](https://github.com/lubosdz/yii2-template-engine/blob/main/src/TemplateEngine.php#L98) into system logs.
 Typically, these may be ie. unprocessed placeholders (meaning no value supplied) or failed parsing of placeholders.
-It is highly recommended to enable this logging while development.
+It is highly recommended to enable this logging during development.
 However, in production it may be more desired to turn it off by setting:
 
 ```php
@@ -310,14 +310,15 @@ Replacing of empty or unprocessed placeholders
 ----------------------------------------------
 
 By default the engine does not replace any unprocessed or empty placeholders.
-This allows collecting and logging missed placeholders for which have not been supplied values.
-By defining replacement as a string we can force the engine to insert such a string
-into the output for empty or unprocessed placeholders.
-Following are valid replacement alternatives:
+This allows quick discovering the issues in templates during development.
+By defining **replacement as a string** we can force the engine to insert such a string
+into the output for all empty or unprocessed placeholders.
+Following are typical and valid replacement alternatives:
 
 
 ```php
 // default - do not process any empty placeholders
+// generated map will set for missed placeholders NULL
 $engine->setForceReplace(false);
 
 // yes, replace empty placeholders with empty string
@@ -330,6 +331,28 @@ $engine->setForceReplace(".....");
 // yes, replace empty placeholders with HTML entity to retain spacing
 $engine->setForceReplace("&nbsp;");
 ```
+
+
+Reading template resources
+--------------------------
+
+After processing whole template it may be usefull to store some processed data.
+Typically we may want to re-populate template with same values in the future
+and store current data into the database.
+The engine allows reading generated resources.
+
+
+```php
+list($map, $placeholders, $values, $html) = $engine->getResources();
+```
+
+This will return all data necessary for reconstructing the template:
+
+* `$map` .. array of pairs `placeholder` => `processed value`
+* `$placeholders` .. array of pairs `placeholder` => `directive`
+* `$values` .. array of supplied parameters
+* `$html` .. string raw HTML before processing
+
 
 
 Rendering PDF or MS Word files
