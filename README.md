@@ -251,7 +251,7 @@ $engine->setDirTemplates('/abs/path/to/templates');
 // template directory will be set implicitly as the parent of `invoice.html`
 // note: engine's method "render()" supports Yii's aliases, so if supplied string
 //       starts with ampersand `@` it is assuming template absolute path
-$engine->render('@templates/invoice.html');
+$htmlInvoice = $engine->render('@templates/invoice.html');
 ~~~
 
 Then in processed template add the `import` command:
