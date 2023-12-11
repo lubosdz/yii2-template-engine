@@ -149,7 +149,7 @@ $html = $engine->render('NOTES: {{ notes_textarea | nl2br }}', [
 "
 
 // concatenation - joining strings
-$html = $engine->render('Order #{{ order_id | concat("by customer"; " - ") | concat(customer.name) }}', [
+$html = $engine->render('Order #{{ order_id | concat("by user"; " - ") | concat(customer.name) }}', [
 	'order_id' => "123",
 	'customer' => [
 		'name' => 'John Doe',
