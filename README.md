@@ -149,10 +149,10 @@ $html = $engine->render('NOTES: {{ notes_textarea | nl2br }}', [
 "
 
 // concatenation - joining strings
-$html = $engine->render('Order #{{ order_id | concat("by customer"; " - ") | concat(customer.fullname) }}', [
+$html = $engine->render('Order #{{ order_id | concat("by customer"; " - ") | concat(customer.name) }}', [
 	'order_id' => "123",
 	'customer' => [
-		'fullname' => 'John Doe',
+		'name' => 'John Doe',
 	],
 ]);
 // output "Order #123 by customer - John Doe"
@@ -421,6 +421,11 @@ $writer = \PhpOffice\PhpWord\IOFactory::createWriter($word, 'Word2007');
 $writer->save('/save/path/my-invoice.docx');
 ~~~
 
+Running tests
+=============
+
+* run `phpunit` in the root directory
+
 
 Tips & notes
 ============
@@ -446,11 +451,11 @@ Changelog
 1.0.8 - released 2023-12-11
 ---------------------------
 
-* refactored ELSEFOR behaviour - the condition will apply if no items to look through
+* refactored ELSEFOR behaviour - the condition will apply if no items to loop through
 * improved parsing REGEX expressions for more precise match
 * translation of placeholder keys now uses REGEX boundary `\b` to avoid naming conflicts
-* added build-in directive replace e.g. " {{ user_name | replace(BADSTRING, GOODSTRING) }} "
-* support for atomic booleans in IF condition e.g. {{ if cars }} ... {{ endif }}
+* added build-in directive `replace` e.g. " {{ name | replace(WHAT, REPLACE) }} "
+* support for atomic booleans in `IF` condition eg. {{ if cars }} ... {{ endif }}
 * added test + improved documentation
 
 
