@@ -117,6 +117,47 @@ $html = $engine->render('Address is {{ customer.address.city }} {{ customer.addr
 // output e.g.: "Address is Prague 10000."
 ~~~
 
+Other built-in directives:
+
+~~~php
+
+// trim - standard PHP trim function
+$html = $engine->render('Hello {{ username | trim }} ', [
+	'username' => '   John Doe!   ',
+]);
+// output "Hello John Doe!"
+
+$html = $engine->render('Hello {{ username | trim(" !eo") }}', [
+	'username' => '   John Doe!   ',
+]);
+// output "Hello John D"
+
+// replace - match simple string or regular expression (REGEX)
+$html = $engine->render('HELLO {{ name | replace (BADBOY, GOODBOY) }}!', [
+	'name' => 'BADBOY'
+]);
+// output "HELLO GOODBOY"
+
+// nl2br - new lines to brackets
+$html = $engine->render('NOTES: {{ notes_textarea | nl2br }}', [
+	'notes_textarea' => "first line ...\nsecond line\n- last line -"
+]);
+// output:
+"NOTES: first line ...
+<br>second line
+<br>- last line -
+"
+
+// concatenation - joining strings
+$html = $engine->render('Order #{{ order_id | concat("by customer"; " - ") | concat(customer.fullname) }}', [
+	'order_id' => "123",
+	'customer' => [
+		'fullname' => 'John Doe',
+	],
+]);
+// output "Order #123 by customer - John Doe"
+
+~~~
 
 
 Dynamic directives
@@ -398,11 +439,20 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 }
 ~~~
 
-* the Yii-dependency can be easily dropped so the engine can be used as a standalone renderer.
-
 
 Changelog
 =========
+
+1.0.8 - released 2023-12-11
+---------------------------
+
+* refactored ELSEFOR behaviour - the condition will apply if no items to look through
+* improved parsing REGEX expressions for more precise match
+* translation of placeholder keys now uses REGEX boundary `\b` to avoid naming conflicts
+* added build-in directive replace e.g. " {{ user_name | replace(BADSTRING, GOODSTRING) }} "
+* support for atomic booleans in IF condition e.g. {{ if cars }} ... {{ endif }}
+* added test + improved documentation
+
 
 1.0.7 - released 2023-11-14
 ---------------------------

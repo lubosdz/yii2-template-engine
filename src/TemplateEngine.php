@@ -978,4 +978,34 @@ class TemplateEngine
 
 		return $val;
 	}
+
+	/**
+	* Replace string within the string
+	* @param string $val Passed in piped/chained value
+	* @param string $what String to be replaced or REGEX e.g. "{{ name | replace( /(john)/i ; peter) }}"
+	* @param string $replace New string
+	*/
+	protected function dir_replace($val, $what = '', $replace = '')
+	{
+		if($val && $what){
+			if (preg_match('/^["\']([^"\']+["\']$)/', $what, $match)) {
+				$what = trim($match[1], '"\'');
+			} else {
+				$what = trim((string)$what);
+			}
+			if (preg_match('/^["\']([^"\']+["\']$)/', $replace, $match)) {
+				$replace = trim($match[1], '"\'');
+			} else {
+				$replace = trim((string)$replace);
+			}
+			if (preg_match('/^[\/@#](.+)[\/@#imsxADSUXJun]+$/', $what, $match)) {
+				// REGEX replace - note: pipe | is not supported due to directive chaining, e.g. "/(word1|word2)/" will not work
+				$val = preg_replace($match[0], $replace, $val);
+			} else {
+				// default string replace
+				$val = str_replace($what, (string) $replace, $val);
+			}
+		}
+		return $val;
+	}
 }

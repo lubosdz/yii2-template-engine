@@ -199,6 +199,23 @@ HTML;
 		$result = $engine->render($html, $params);
 		$expected = " aaa    John Doe    bbb ";
 		$this->assertTrue($result == $expected);
+
+		// replace
+		$engine->setArgSeparator(',');
+		$html = ' HELLO {{ name | replace ( BADBOY ,  GOODBOY ) }}! ';
+		$params = ['name' => 'BADBOY'];
+		$result = $engine->render($html, $params);
+		$this->assertTrue(false !== strpos($result, "HELLO GOODBOY"));
+
+		$html = ' HELLO {{ name | replace ( " BOY",  "GIRL" ) }}! ';
+		$params = ['name' => 'BAD BOY'];
+		$result = $engine->render($html, $params);
+		$this->assertTrue(false !== strpos($result, "HELLO BADGIRL"));
+
+		$html = ' HELLO {{ name | replace ( "/boy/i", "friend1" ) | replace ( /GIRL/i, \'friend2\' ) }}! ';
+		$params = ['name' => 'BAD BOY - GOOD GIRL'];
+		$result = $engine->render($html, $params);
+		$this->assertTrue($result == " HELLO BAD friend1 - GOOD friend2! ");
 	}
 
 	/**
