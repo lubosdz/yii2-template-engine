@@ -20,7 +20,7 @@
 		<td> Subtotal &euro; </td>
 	</tr>
 
-	{{ for item in items }}
+	{{for item in items}}
 
 		{{ SET subtotal = item.qty * item.priceNetto * (100 + item.vatPerc) / 100 }}
 
@@ -44,7 +44,7 @@
 		{{ SET total = total + subtotal }}
 
 	{{ elsefor }}
-		EMPTY ITEM #{{ loop.index }} !!
+		EMPTY ITEMS!
 	{{ endfor }}
 
 	<tr bgcolor="#EEEEEE">

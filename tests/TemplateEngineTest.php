@@ -272,6 +272,62 @@ HTML;
 		$resultHtml = $engine->render($html);
 		$this->assertTrue(false !== strpos($resultHtml, '[xFIRSTy]') && false === strpos($resultHtml, '{{'));
 		$this->assertEmpty($engine->getErrors());
+
+		$html = 'Evaluating ... [xxx {{ nonExistend }} yyy]';
+		$engine->setForceReplace('---');
+		$result = $engine->render($html);
+		$this->assertTrue($result == "Evaluating ... [xxx --- yyy]");
+
+		$result = $engine->render($html, ['nonExistend' => 'ooo']);
+		$this->assertTrue($result == "Evaluating ... [xxx ooo yyy]");
+
+		$result = $engine->render($html, ['nonExistendxxx' => 'ooo']);
+		$this->assertTrue($result == "Evaluating ... [xxx --- yyy]");
+
+		$result = $engine->render($html, ['nonExisten' => 'ooo']);
+		$this->assertTrue($result == "Evaluating ... [xxx --- yyy]");
+
+		$result = $engine->render($html, ['nonExistenD' => 'ooo']);
+		$this->assertTrue($result == "Evaluating ... [xxx --- yyy]");
+
+		// deep chaining
+		$result = $engine->render("Hello {{aaa.bbb.ccc.ddd}}!", [
+			'aaa' => [
+				'bbb' => [
+					'ccc' => [
+						'ddd' => 'world',
+					]
+				],
+			],
+		]);
+
+		$this->assertTrue($result == "Hello world!");
+
+		// atomic boolean / single variable
+		$html = "Hello {{ if user }} {{user.name}} {{ else }} NOBODY {{ endif }}!";
+		$params = ['user' => ['name' => 'JOHN']];
+		$result = $engine->render($html, $params);
+		$this->assertTrue($result == "Hello JOHN!");
+
+		$params = ['user' => []];
+		$result = $engine->render($html, $params);
+		$this->assertTrue($result == "Hello NOBODY!", $result);
+
+		$result = $engine->render($html, []);
+		$this->assertTrue($result == "Hello NOBODY!", $result);
+
+		$params = ['user' => ['surname' => 'Doe']];
+		$result = $engine->render($html, $params);
+		$this->assertTrue($result == "Hello ---!", $result);
+
+		// numeric keys - edge case
+		$html = "Hello {{ if 0 }} {{user.surname}} {{ else }} NOBODY {{ endif }}!";
+		$result = $engine->render($html, $params);
+		$this->assertTrue($result == "Hello NOBODY!", $result);
+
+		$html = "Hello {{ if 1 }} {{user.surname}} {{ else }} NOBODY {{ endif }}!";
+		$result = $engine->render($html, $params);
+		$this->assertTrue($result == "Hello Doe!", $result);
 	}
 
 	/**
@@ -298,7 +354,10 @@ HTML;
 <h2>Rendering invoice items for customer #{{customer.id}} on {{ today }}  ...</h2>
 <table class="table">
 
-{{ for item in items }}
+{{ SET total = 0 }}
+{{ SET subtotal = 0 }}
+
+{{for item in items}}
 
 	{{ SET subtotal = item.qty * item.priceNetto * (100 + item.vatPerc) / 100 }}
 
@@ -322,20 +381,28 @@ HTML;
 	{{ SET total = total + subtotal }}
 
 {{ elsefor }}
-	EMPTY ITEM #{{ loop.index }} !!
+	<tr><td> EMPTY ITEMS! </td></tr>
 {{ endfor }}
 
 </table>
 
+{{ if total > 0 }}
 <p>Amount due: <b> {{ total | round(2) }} Eur </b></p>
+{{ else }}
+<p>DO NOT PAY!</p>
+{{ endif }}
+
 {{ if var_symbol }} Invoice VS: {{ var_symbol }} {{ endif }}
 HTML;
 
+		$engine->setLogErrors(true);
 		$resultHtml = $engine->render($html, $params);
 
 		$this->assertTrue(
 			   false !== strpos($resultHtml, 'customer #123') // translated model attributes
 			&& false === strpos($resultHtml, '{{') // all placeholders translated
+			&& false === strpos($resultHtml, 'EMPTY ITEMS')
+			&& false === strpos($resultHtml, 'DO NOT PAY')
 			&& false !== strpos($resultHtml, '#4 - LAST LOOP') // properly detected last item
 			&& false !== strpos($resultHtml, '<p>Amount due: <b> 40.00 Eur </b></p>') // expected total due amount
 			&& false !== strpos($resultHtml, $params['var_symbol']) // test leading zero in numeric param
@@ -362,8 +429,25 @@ HTML;
 			&& false !== strpos($resultHtml, 'My Supplier, Ltd.') // imported header
 			&& false !== strpos($resultHtml, 'customer #123') // translated model attributes
 			&& false === strpos($resultHtml, '{{') // all placeholders translated
+			&& false === strpos($resultHtml, 'EMPTY ITEMS') // all placeholders translated
 			&& false !== strpos($resultHtml, '#4 - LAST LOOP') // properly detected last item
 			&& false !== strpos($resultHtml, '<b>40.00 &euro;</b>') // expected total due amount
+		);
+
+		$params['items'] = [];
+		$resultHtml = $engine->render($html, $params);
+
+		$this->assertTrue(
+			   false === strpos($resultHtml, '{{') // all placeholders translated
+			&& false !== strpos($resultHtml, 'EMPTY ITEMS')
+		);
+
+		unset($params['items']);
+		$resultHtml = $engine->render($html, $params);
+
+		$this->assertTrue(
+			   false === strpos($resultHtml, '{{') // all placeholders translated
+			&& false !== strpos($resultHtml, 'EMPTY ITEMS')
 		);
 	}
 

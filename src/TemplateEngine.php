@@ -233,8 +233,9 @@ class TemplateEngine
 	* @param string $html HTML to be processed. This can be also path alias starting with "@" e.g. "@app/templates/invoice.html"
 	* @param array $params List of params - AR objects, arrays or non-numeric scalars
 	* @param bool $resetGlobalVars Clear already parsed global directives
+	* @param bool $cacheRes Whether to cache or not resources, false only for processing {{ for }} to process correctly repeated sections
 	*/
-	public function render($html, array $values = [], $resetGlobalVars = true)
+	public function render($html, array $values = [], $resetGlobalVars = true, $cacheRes = true)
 	{
 		if ('@' == substr($html, 0, 1)) {
 			// load HTML from path alias, file must exist
@@ -259,17 +260,17 @@ class TemplateEngine
 			}
 
 			$placeholders = $this->collectPlaceholders($html);
-			if ($placeholders) {
+			if ($placeholders && $cacheRes) {
 				$this->resPlaceholders += $placeholders;
 			}
 
 			$values = $this->collectValues($placeholders, $values);
-			if ($values) {
+			if ($values && $cacheRes) {
 				$this->resValues += $values;
 			}
 
 			$map = $this->generateMap($placeholders, $values);
-			if ($map) {
+			if ($map && $cacheRes) {
 				$this->resMap += $map;
 			}
 
@@ -293,21 +294,21 @@ class TemplateEngine
 			if ($pos2 && $pos2 > $pos1) {
 				$placeholder = substr($html, $pos1, $pos2 - $pos1 + 2);
 
-				if (preg_match('/^{{\s*if\s+(.+)}}/i', $placeholder)) {
+				if (preg_match("/^{{\s*if\b(.+)}}/i", $placeholder)) {
 					// parse {{ IF .. ELSEIF .. ELSE .. ENDIF }}
 					$pos2 = stripos($html, 'endif', $pos1);
 					if ($pos2 && ($pos2 = stripos($html, '}}', $pos2))) {
 						$placeholder = substr($html, $pos1, $pos2 - $pos1 + 2);
 					}
 					$trimPattern = " \n"; // keep curly brackets for easier parsing
-				} elseif (preg_match('/^{{\s*for\s+(.+)}}/i', $placeholder)) {
+				} elseif (preg_match("/^{{\s*for\b(.+)}}/i", $placeholder)) {
 					// parse {{ FOR .. ELSEFOR .. ENDFOR }}
 					$pos2 = stripos($html, 'endfor', $pos1);
 					if ($pos2 && ($pos2 = stripos($html, '}}', $pos2))) {
 						$placeholder = substr($html, $pos1, $pos2 - $pos1 + 2);
 					}
 					$trimPattern = " \n"; // keep curly brackets for easier parsing
-				} elseif (preg_match('/^{{\s*set\s+(.+)=(.+)/i', $placeholder)) {
+				} elseif (preg_match("/^{{\s*set\b(.+)=(.+)/i", $placeholder)) {
 					// parse {{ SET variable = expression }}
 					$trimPattern = " {}\n";
 				} else {
@@ -366,13 +367,13 @@ class TemplateEngine
 			$val = null; // default NULL - means not replaced (e.g. expression syntax error, invalid variable name etc.)
 			$paramsValid = array_merge($paramsValid, $this->globalVars);
 
-			if (preg_match('/^{{\s*if\s+/i', $directives)) {
+			if (preg_match("/^{{\s*if\b/i", $directives)) {
 				$val = $this->parseAndEvalIf($directives, $paramsValid);
-			} elseif (preg_match('/^{{\s*for\s+/i', $directives)) {
+			} elseif (preg_match("/^{{\s*for\b/i", $directives)) {
 				$val = $this->parseAndEvalFor($directives, $paramsValid);
-			} elseif (preg_match('/^\s*set\s+/i', $directives)) {
+			} elseif (preg_match("/^\s*set\b/i", $directives)) {
 				$val = $this->parseAndEvalSet($directives, $paramsValid);
-			} elseif (preg_match('/^\s*import\s+/i', $directives)) {
+			} elseif (preg_match("/^\s*import\b/i", $directives)) {
 				$val = $this->parseAndEvalImport($directives, $paramsValid);
 			} else {
 				$directives = explode('|', $directives);
@@ -527,7 +528,7 @@ class TemplateEngine
 	protected function parseAndEvalIf($directive, array $paramsValid)
 	{
 		$val = null; // placeholder won't be replaced if condition invalid
-		$parts = preg_split('/{{\s*(if |elseif|else|endif)/i', $directive);
+		$parts = preg_split("/{{\s*(if\b|\belseif\b|\belse\b|endif)/i", $directive);
 
 		foreach ($parts as $part) {
 			if ($part && false !== strpos($part, '}}')) {
@@ -546,8 +547,8 @@ class TemplateEngine
 							// don't replace placeholder - usually missing (undefined) variable inside IF condition e.g. "Use of undefined constant abc - assumed 'abc'"
 							return null;
 						}
-					}catch(\Throwable $e){
-						$this->addError("[if] ".$e->getMessage()." in expression [{$php}].\nFull directive:\n{$directive}\n");
+					} catch (\Throwable $e) {
+						$this->addError("[if] Parse error: {$e->getMessage()} on line {$e->getLine()} in expression [{$php}].\nFull directive:\n{$directive}\n");
 						return null; // don't replace placeholder - this is error
 					}
 				} else {
@@ -573,20 +574,32 @@ class TemplateEngine
 		$expr = trim($expr);
 		$map = [];
 
-		// required bool single key e.g. {{ if user }}
-		if ($expr && array_key_exists($expr, $paramsValid)) {
-			return empty($paramsValid[$expr]) ? 'false' : 'true';
+		if ($expr) {
+			// check single variable key e.g. "user" or "user_name"
+			if (array_key_exists($expr, $paramsValid)) {
+				// key hit expression e.g. "{{ if users }}"
+				return empty($paramsValid[$expr]) ? 'false' : 'true';
+			} elseif (!is_numeric($expr) && strlen($expr) < 30 && preg_match('/^\w+$/', $expr)) {
+				// Here we assume single non-numeric key up to 30 chars, which does not exist, therefore no further processing needed.
+				// The pattern/condition should meet requirements for naming the PHP constants (more tuning here possibly needed).
+				// This prevents from PHP eval error "Undefined constant ...".
+				// We ignore valid patterns such as:
+				//  - related attributes with syntax "user.name",
+				//  - formulas with math operators +/- ..
+				//  - strings containing spaces and/or non a-Z chars
+				return 'false';
+			}
 		}
 
 		// collect attribute / array values
-		preg_match_all('/([\w]+\.[\w]+)/i', $expr, $match);
+		preg_match_all("/([\w]+\.[\w]+)/i", $expr, $match);
 		if (!empty($match[0])) {
 			foreach ($match[0] as $directive) {
 				$val = (string) $this->processDirective($directive, $paramsValid);
 				if (!is_numeric($val) || trim($val) === "" || '0' === substr($val, 0, 1)) {
 					$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> ""
 				}
-				$map[$directive] = $val;
+				$map["/\b".$directive."\b/"] = $val;
 			}
 		}
 
@@ -601,7 +614,7 @@ class TemplateEngine
 				} else {
 					// ugly & unreliable workaround - fix NULL and "" to avoid f**king "non-numeric value encountered" since 7.1
 					// NULL & empty strings should have been treated just like before 7.1 !!! or only under strict mode !!
-					if (preg_match('/[\+\-\*\/]+/', $expr)) {
+					if (preg_match("/[\+\-\*\/\>\<\=]+/", $expr)) {
 						// we have probably math formula - cast to a number
 						$val = floatval($val); // fix eval crash: null -> 0 in formulas
 					} else {
@@ -609,13 +622,11 @@ class TemplateEngine
 						$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> "" for strings
 					}
 				}
-				$map[$key] = $val;
+				$map["/\b".$key."\b/"] = $val;
 			}
 		}
-
 		// translate strings inside condition
-		// (!) note: don't use short variable names e.g. "a", use ALWAYS unique strings e.g. "_myUniqueVariable"
-		return strtr($expr, $map);
+		return preg_replace(array_keys($map), $map, $expr);
 	}
 
 	/**
@@ -626,22 +637,23 @@ class TemplateEngine
 	protected function parseAndEvalFor($directive, array $paramsValid)
 	{
 		$val = null;
-		$parts = preg_split('/{{\s*(elsefor|endfor)/i', trim($directive));
+		$parts = preg_split("/{{\s*(elsefor\b|\bendfor\b)/i", trim($directive));
 
-		if (!empty($parts[0]) && preg_match('/^{{\s*for\s+(.+)\s+in\s+(.+) }}/i', $parts[0], $match)) {
+		if (!empty($parts[0]) && preg_match("/^{{\s*for\s+(.+)\s+in\s+(.+)\s*}}/i", $parts[0], $match)) {
 
 			list(, $varName, $itemsName) = $match;
+			$itemsName = trim($itemsName);
 			$htmlFor = trim(explode('}}', $parts[0], 2)[1]);
-			$htmlElsefor = (3 == count($parts)) ? trim($parts[1], " \t\n\r\0\x0B{}") : '';
+			$htmlElseFor = (3 == count($parts)) ? trim($parts[1], " \t\n\r\0\x0B{}") : '';
 
-			if (isset($paramsValid[$itemsName]) && is_array($paramsValid[$itemsName])) {
+			if (!empty($paramsValid[$itemsName]) && is_array($paramsValid[$itemsName])) {
 
 				$items = $paramsValid[$itemsName];
 				$count = count($items);
 				$index = 1;
 
 				foreach ($items as $item) {
-					// additional variables - similar to twig, https://twig.symfony.com/doc/3.x/tags/for.html
+					// loop variables - similar to twig, https://twig.symfony.com/doc/3.x/tags/for.html
 					$paramsValid['loop'] = [
 						'index' => $index,           // 1-based iteration counter
 						'index0' => $index - 1,      // 0-based iteration counter
@@ -650,15 +662,15 @@ class TemplateEngine
 						'last' => $index == $count,  // true on last iteration
 					];
 
-					if ($item) {
-						$paramsValid[$varName] = $item;
-						$val .= "\n".$this->render($htmlFor, $paramsValid, false);
-					} elseif ($htmlElsefor) {
-						$val .= "\n".$this->render($htmlElsefor, $paramsValid, false);
-					}
+					$paramsValid[$varName] = $item;
+					$val .= "\n".$this->render($htmlFor, $paramsValid, false, false);
 					++$index;
 				}
-				$val = trim($val);
+
+				$val = trim( (string) $val);
+
+			} elseif ($htmlElseFor) {
+				$val .= $this->render($htmlElseFor, $paramsValid, false);
 			}
 		}
 
@@ -680,7 +692,7 @@ class TemplateEngine
 		$parts = explode('=', $directive, 2);
 
 		if (!empty($parts[1])) {
-			$varName = trim(preg_replace('/^set /i', '', $parts[0]));
+			$varName = trim(preg_replace("/^set\b/i", '', $parts[0]));
 			$expression = trim($parts[1]);
 			$result = $php = null;
 
@@ -699,7 +711,7 @@ class TemplateEngine
 					$this->addError(strip_tags($err));
 				}
 			} catch (\Throwable $e) {
-				$this->addError("[set] ".$e->getMessage()." in expression [{$php}].\nFull directive:\n{$directive}\n");
+				$this->addError("[set] Parse error: {$e->getMessage()} on line {$e->getLine()} in expression [{$php}].\nFull directive:\n{$directive}\n");
 				return null; // don't replace placeholder on parsing error
 			}
 
@@ -750,7 +762,7 @@ class TemplateEngine
 	{
 		if (!$val) {
 			return false; // 0, null, "", false
-		} elseif (preg_match('/\d+/', $val) && (is_numeric($val) || strtotime($val))) {
+		} elseif (preg_match("/\d+/", $val) && (is_numeric($val) || strtotime($val))) {
 			// valid datetime string must contain at least one digit - either timestamp or date/time string
 			// discovered strange PHP bug (?): strtotime('......') -> 1689019109 (current timestamp)
 			return true;
