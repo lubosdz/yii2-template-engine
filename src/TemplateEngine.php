@@ -599,7 +599,9 @@ class TemplateEngine
 				if (!is_numeric($val) || trim($val) === "" || '0' === substr($val, 0, 1)) {
 					$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> ""
 				}
-				$map["/\b".$directive."\b/"] = $val;
+				if (false === strpos($directive, '{{')) {
+					$map["/\b".$directive."\b/"] = $val;
+				}
 			}
 		}
 
@@ -622,11 +624,18 @@ class TemplateEngine
 						$val = '"'.trim( (string) $val, '"').'"'; // fix eval crash: null -> "" for strings
 					}
 				}
-				$map["/\b".$key."\b/"] = $val;
+				if (false === strpos($key, '{{')) {
+					$map["/\b".$key."\b/"] = $val;
+				}
 			}
 		}
+
 		// translate strings inside condition
-		return preg_replace(array_keys($map), $map, $expr);
+		if ($map) {
+			$expr = preg_replace(array_keys($map), $map, $expr);
+		}
+
+		return $expr;
 	}
 
 	/**
