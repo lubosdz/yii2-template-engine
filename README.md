@@ -448,6 +448,12 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 Changelog
 =========
 
+1.0.9 - released 2023-12-29
+---------------------------
+
+* exclude partially parsed placeholders from expression translator
+
+
 1.0.8 - released 2023-12-11
 ---------------------------
 
