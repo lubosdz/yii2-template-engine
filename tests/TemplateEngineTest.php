@@ -216,6 +216,13 @@ HTML;
 		$params = ['name' => 'BAD BOY - GOOD GIRL'];
 		$result = $engine->render($html, $params);
 		$this->assertTrue($result == " HELLO BAD friend1 - GOOD friend2! ");
+
+		// 10 234,99 -> 10234.99
+		$engine->setArgSeparator(";"); // prevent from collision with current arg separator ","
+		$html = '{{ total | replace ("," ; ".") | replace (" ") | replace (/\s+/) }}';
+		$params = ['total' => '10 234,99'];
+		$result = $engine->render($html, $params);
+		$this->assertTrue($result == "10234.99");
 	}
 
 	/**

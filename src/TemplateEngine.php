@@ -996,25 +996,25 @@ class TemplateEngine
 	*/
 	protected function dir_replace($val, $what = '', $replace = '')
 	{
-		if($val && $what){
+		$what = (string) $what;
+
+		if ($val && $what !== '') {
 			if (preg_match('/^["\']([^"\']+["\']$)/', $what, $match)) {
 				$what = trim($match[1], '"\'');
-			} else {
-				$what = trim((string)$what);
 			}
+			$replace = (string) $replace;
 			if (preg_match('/^["\']([^"\']+["\']$)/', $replace, $match)) {
 				$replace = trim($match[1], '"\'');
-			} else {
-				$replace = trim((string)$replace);
 			}
 			if (preg_match('/^[\/@#](.+)[\/@#imsxADSUXJun]+$/', $what, $match)) {
-				// REGEX replace - note: pipe | is not supported due to directive chaining, e.g. "/(word1|word2)/" will not work
+				// REGEX pattern - note: pipe | is not supported due to directive chaining, e.g. "/(word1|word2)/" will not work
 				$val = preg_replace($match[0], $replace, $val);
 			} else {
 				// default string replace
 				$val = str_replace($what, (string) $replace, $val);
 			}
 		}
+
 		return $val;
 	}
 }
