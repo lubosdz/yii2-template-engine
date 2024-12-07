@@ -43,7 +43,7 @@ class TemplateEngine
 	protected $resMap = []; //
 
 	/** @var string Parsed HTML source */
-	protected $resHtml;
+	protected $resHtml = null;
 
 	/** @var array List of dynamic directives */
 	protected $dynDir = [];
@@ -69,7 +69,7 @@ class TemplateEngine
 	/**
 	* @var string Absolute path to directory with templates
 	*/
-	protected $dirTemplates;
+	protected $dirTemplates = '';
 
 	/**
 	* @var array Variables parsed & evaluated by SET directive
@@ -97,7 +97,7 @@ class TemplateEngine
 		register_shutdown_function(function(){
 			if ($this->logErrors && $this->errors) {
 				Yii::error("Found ".count($this->errors)." errors while processing HTML template ["
-					.StringHelper::truncate($this->resHtml, 100) // we have no other identification
+					.StringHelper::truncate((string)$this->resHtml, 100) // we have no other identification
 					."]: \n".implode("\n", $this->errors), 'app.template');
 			}
 		});
@@ -251,7 +251,7 @@ class TemplateEngine
 
 		if (null === $this->resHtml) {
 			// keep only the very first supplied HTML source
-			$this->resHtml = $html;
+			$this->resHtml = (string) $html;
 		}
 
 		if ($html) {
