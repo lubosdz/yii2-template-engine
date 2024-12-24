@@ -352,6 +352,26 @@ HTML;
 		$html = "Hello {{ if 1 }} {{user.surname}} {{ else }} NOBODY {{ endif }}!";
 		$result = $engine->render($html, $params);
 		$this->assertTrue($result == "Hello Doe!", $result);
+
+		// quotes may not cause IF eval crash
+		$html = <<<HTML
+{{ if exprQuotes }}
+	GOOD
+{{ else }}
+	BAD
+{{ endif }}
+HTML;
+		$params = ['exprQuotes' => "MULTIPLE 'QUOTES' INSIDE"];
+		$result = $engine->render($html, $params);
+		$this->assertTrue(false !== strpos($result, "GOOD"));
+
+		$params = ['exprQuotes' => 'MULTIPLE "QUOTES" INSIDE'];
+		$result = $engine->render($html, $params);
+		$this->assertTrue(false !== strpos($result, "GOOD"));
+
+		$params = ['exprQuotes' => 'MULTIPLE "QUOTES" \"/" &quot; \' INSIDE'];
+		$result = $engine->render($html, $params);
+		$this->assertTrue(false !== strpos($result, "GOOD"));
 	}
 
 	/**
