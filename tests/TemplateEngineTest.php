@@ -1,7 +1,7 @@
 <?php
 /**
 * Tests for Yii2 templating engine
-* Tests passing PHP 7.0 - 8.2
+* Tests passing PHP 7.0 - 8.4
 */
 
 use lubosdz\yii2\TemplateEngine;
@@ -30,6 +30,40 @@ class TemplateEngineTest extends TestCase
 
 		// turn off logging since we dont have database setup for tests
 		$this->engine->setLogErrors(false);
+	}
+
+	protected function tearDown(): void
+	{
+		parent::tearDown();
+
+		// remove error / exception handlers injectedf by the framework since phpunit 11+
+		// https://github.com/symfony/symfony/issues/53812#issuecomment-1962740145
+		$this->restoreExceptionHandler();
+		$this->restoreErrorHandler();
+	}
+
+	protected function restoreExceptionHandler(): void
+	{
+		while (true) {
+			$previousHandler = set_exception_handler(null);
+			restore_exception_handler();
+			if ($previousHandler === null) {
+				break;
+			}
+			restore_exception_handler();
+		}
+	}
+
+	protected function restoreErrorHandler(): void
+	{
+		while (true) {
+			$previousHandler = set_error_handler(null);
+			restore_error_handler();
+			if(!$previousHandler || $previousHandler instanceOf \PHPUnit\Runner\ErrorHandler){
+				break;
+			}
+			restore_error_handler();
+		}
 	}
 
 	/**

@@ -448,15 +448,19 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 Changelog
 =========
 
+1.1.0 - released 2024-12-26
+---------------------------
+* fix the condition expression containing double quotes in IF statement
+* added tests, now passing PHP 7.0 - 8.4
+
+
 1.0.9 - released 2023-12-29
 ---------------------------
-
 * exclude partially parsed placeholders from expression translator
 
 
 1.0.8 - released 2023-12-11
 ---------------------------
-
 * refactored ELSEFOR behaviour - the condition will apply if no items to loop through
 * improved parsing REGEX expressions for more precise match
 * translation of placeholder keys now uses REGEX boundary `\b` to avoid naming conflicts
@@ -467,20 +471,17 @@ Changelog
 
 1.0.7 - released 2023-11-14
 ---------------------------
-
 * fix eval error for numeric values starting with zero (should cast to string)
 
 
 1.0.6 - released 2023-10-22
 ---------------------------
-
 * support importing subtemplates via `{{ import file }}`
 * fix converting formatted number to a valid PHP number in directive `dir_round`
 
 
 1.0.5 - released 2023-09-18
 ---------------------------
-
 * support configurable argument separator (beside default semicolon ";")
 * resolve deep-tree argument key conflicts
 * added built-in directive concat, trim
@@ -489,7 +490,6 @@ Changelog
 
 1.0.4 - released 2023-09-05
 ---------------------------
-
 * support PHP 8.2
 * properly detect valid Datetime string in built-in directive
 * forceReplace now takes beside boolean also string as a replacement value
@@ -500,25 +500,21 @@ Changelog
 
 1.0.3 - released 2022-08-04
 ---------------------------
-
 * added support for loading HTML via path alias, e.g. `$engine->render('@app/templates/invoice.html', $data)`
 * minor documentation improvements
 
 
 1.0.2 - released 2022-02-01
 ---------------------------
-
 * fix compatability for PHP 8.1
 
 
 1.0.1 - released 2021-12-30
 ---------------------------
-
 * fix tests for PHP 7.0 - 8.0
 * improved documentation
 
 
 1.0.0 - released 2021-12-13
 ---------------------------
-
 * initial release
