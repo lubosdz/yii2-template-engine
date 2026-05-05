@@ -527,6 +527,22 @@ HTML;
 			   false === strpos($resultHtml, '{{') // all placeholders translated
 			&& false !== strpos($resultHtml, 'EMPTY ITEMS')
 		);
+
+		// ternary operator ie. {{ valueIsTrue ? condition1 : condition2 }}
+		$html = "today is {{ dayInWeek == 1 ? 'monday' : 'anything but monday' }}";
+
+		$resultHtml = $engine->render($html, ['dayInWeek' => 1]);
+		$this->assertTrue($resultHtml == 'today is monday');
+
+		$resultHtml = $engine->render($html, ['dayInWeek' => 0]);
+		$this->assertTrue(false !== strpos($resultHtml, 'today is anything but monday'));
+
+		$resultHtml = $engine->render($html);
+		$this->assertTrue($resultHtml == $html); // not translated due to parse error - Undefined constant "dayInWeek"
+
+		$html = "your name is {{ Customer.name ? Customer.name : 'unknown' }}"; // customer and Customer will translate into same object
+		$resultHtml = $engine->render($html, $params);
+		$this->assertTrue($resultHtml == 'your name is John Doe');
 	}
 
 	/**

@@ -308,9 +308,6 @@ class TemplateEngine
 						$placeholder = substr($html, $pos1, $pos2 - $pos1 + 2);
 					}
 					$trimPattern = " \n"; // keep curly brackets for easier parsing
-				} elseif (preg_match("/^{{\s*set\b(.+)=(.+)/i", $placeholder)) {
-					// parse {{ SET variable = expression }}
-					$trimPattern = " {}\n";
 				} else {
 					// any placeholder e.g. "order.id", "variableName" or "order.created | date"
 					$trimPattern = " {}\n";
@@ -375,6 +372,8 @@ class TemplateEngine
 				$val = $this->parseAndEvalSet($directives, $paramsValid);
 			} elseif (preg_match("/^\s*import\b/i", $directives)) {
 				$val = $this->parseAndEvalImport($directives, $paramsValid);
+			} elseif (preg_match("/^(.+)\?(.+)\:(.+)$/", $directives, $match)) {
+				$val = $this->parseAndEvalTernary($match[1], $match[2], $match[3], $paramsValid);
 			} else {
 				$directives = explode('|', $directives);
 				foreach ($directives as $directive) {
@@ -392,6 +391,52 @@ class TemplateEngine
 		}
 
 		return $map;
+	}
+
+	/**
+	* Parse and evaluate ternary operator {{ condition ? expressionTrue : expressionFalse }}
+	* @param string $condition
+	* @param string $exprTrue
+	* @param string $exprFalse
+	* @param array $paramsValid
+	*/
+	protected function parseAndEvalTernary($condition, $exprTrue, $exprFalse, $paramsValid)
+	{
+		$val = $php = '';
+		try {
+			// eval condition
+			$php = $this->translateExpression($condition, $paramsValid);
+			$php = 'return '.$php.';';
+			ob_start();
+			$isTrue = eval($php);
+			$err = ob_get_clean();
+			if ($err) {
+				$this->addError(strip_tags($err));
+				return null;
+			}
+			// eval expression
+			if ($isTrue) {
+				$php = $this->translateExpression($exprTrue, $paramsValid);
+			}else{
+				$php = $this->translateExpression($exprFalse, $paramsValid);
+			}
+			$php = 'return '.$php.';';
+			ob_start();
+			$val = eval($php);
+			$err = ob_get_clean();
+			if ($err) {
+				$this->addError(strip_tags($err));
+				return null;
+			}
+		} catch (\Throwable $e) {
+			$this->addError("[ternary] Parse error: {$e->getMessage()} on line {$e->getLine()} in expression [{$php}].\n");
+			if (ob_get_level()) {
+				ob_get_clean(); // close output buffer
+			}
+			return null; // don't replace placeholder - this is error
+		}
+
+		return $val;
 	}
 
 	/**
@@ -549,6 +594,9 @@ class TemplateEngine
 						}
 					} catch (\Throwable $e) {
 						$this->addError("[if] Parse error: {$e->getMessage()} on line {$e->getLine()} in expression [{$php}].\nFull directive:\n{$directive}\n");
+						if (ob_get_level()) {
+							ob_get_clean(); // close output buffer
+						}
 						return null; // don't replace placeholder - this is error
 					}
 				} else {
