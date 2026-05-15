@@ -448,6 +448,14 @@ class MyRenderer extends \lubosdz\yii2\TemplateEngine
 Changelog
 =========
 
+1.1.1 - released 2026-05-15
+---------------------------
+* added method `reset()`
+* support ternary operator ie. `{{ expression ? trueCondition : falseCondition }}`
+* support arbitrary objects as supplied parameters, not only Yii Active records
+* support public getters and properties
+
+
 1.1.0 - released 2024-12-26
 ---------------------------
 * improved build-in directive `replace`

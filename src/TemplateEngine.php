@@ -228,6 +228,17 @@ class TemplateEngine
 	}
 
 	/**
+	* Clear runtime resources and errors.
+	* Replacement string, dynamic directives and argument separator are not changed.
+	*/
+	public function reset()
+	{
+		$this->errors = $this->globalVars = $this->resMap = $this->resPlaceholders = $this->resValues = [];
+		$this->resHtml = null;
+		return $this;
+	}
+
+	/**
 	* Replace placeholders
 	* Note: this is recursively called method
 	* @param string $html HTML to be processed. This can be also path alias starting with "@" e.g. "@app/templates/invoice.html"
@@ -335,7 +346,7 @@ class TemplateEngine
 		$outModels = $outScalarsArrays = [];
 
 		foreach ($params as $key => $model) {
-			if ($model instanceOf \yii\base\Model) {
+			if (is_object($model)) {
 				// extract objects with attributes (active records & model forms)
 				$name = is_numeric($key) ? self::getShortClassname($model) : strtolower($key);
 				$outModels[$name] = $model;
@@ -522,8 +533,26 @@ class TemplateEngine
 					} elseif (array_key_exists($attr, $paramsValid) && is_array($paramsValid[$attr])) {
 						$array = $paramsValid[$attr];
 					}
-				} elseif ($model && $model->hasProperty($attr)) {
-					$val = $model->{$attr};
+				} elseif ($model) {
+					if ($model instanceOf \yii\base\Model) {
+						if ($model->hasProperty($attr)) {
+							$val = $model->{$attr}; // property, method, getter or related object
+						} else {
+							$this->addError('Referenced unaccessible property ['.$attr.'] in directive ['.$directive.'].');
+							$val = null;
+						}
+					} else {
+						if (property_exists($model, $attr) && isset($model->{$attr})) {
+							$val = $model->{$attr}; // public property
+						} elseif (method_exists($model, $attr) && is_callable([$model, $attr])) {
+							$val = $model->{$attr}(); // direct public method, no args supplied
+						} elseif (method_exists($model, 'get'.$attr) && is_callable([$model, 'get'.$attr])) {
+							$val = call_user_func([$model, 'get'.$attr]); // public getter method, no args supplied
+						} else {
+							$this->addError('Referenced unaccessible property ['.$attr.'] in directive ['.$directive.'].');
+							$val = null;
+						}
+					}
 					// ensure deep-chaining
 					if (is_object($val)) {
 						$model = $val; // e.g. related model
@@ -627,9 +656,11 @@ class TemplateEngine
 			if (array_key_exists($expr, $paramsValid)) {
 				// key hit expression e.g. "{{ if users }}"
 				return empty($paramsValid[$expr]) ? 'false' : 'true';
+			} elseif (array_key_exists(strtolower($expr), $paramsValid)) {
+				// case insensitive object reference e.g. "{{ if Users }}"
+				return empty($paramsValid[strtolower($expr)]) ? 'false' : 'true';
 			} elseif (!is_numeric($expr) && strlen($expr) < 30 && preg_match('/^\w+$/', $expr)) {
-				// Here we assume single non-numeric key up to 30 chars, which does not exist, therefore no further processing needed.
-				// The pattern/condition should meet requirements for naming the PHP constants (more tuning here possibly needed).
+				// $expr is untranslated single string up to 30 chars with no dot-expansion, therefore no further processing needed
 				// This prevents from PHP eval error "Undefined constant ...".
 				// We ignore valid patterns such as:
 				//  - related attributes with syntax "user.name",
@@ -645,7 +676,7 @@ class TemplateEngine
 			foreach ($match[0] as $directive) {
 				$val = (string) $this->processDirective($directive, $paramsValid);
 				if (!is_numeric($val) || trim($val) === "" || '0' === substr($val, 0, 1)) {
-					$val = self::normnalizeEvalExpr($val); // fix eval crash: null -> ""
+					$val = self::normalizeEvalExpr($val); // fix eval crash: null -> ""
 				}
 				if (false === strpos($directive, '{{')) {
 					$map["/\b".$directive."\b/"] = $val;
@@ -655,11 +686,15 @@ class TemplateEngine
 
 		// collect scalars
 		foreach($paramsValid as $key => $val){
-			if (!is_object($val) && !is_array($val)) {
+			if (is_object($val)) {
+				// translate single object references ie. {{ "customer ? customer.name : 'unknown'" }} -> " 'customer' ? customer.name : 'unknown'"
+				// translate case insensitive object references
+				$map["/\b".$key."\b/i"] = "'".$key."'";
+			} elseif (!is_array($val)) {
 				if (trim( (string) $val) !== "") {
 					if (!is_numeric($val) || '0' === substr($val, 0, 1)) {
 						// special case - numeric starting with zero "0" are also strings
-						$val = self::normnalizeEvalExpr($val); // fix eval crash: null -> ""
+						$val = self::normalizeEvalExpr($val); // fix eval crash: null -> ""
 					}
 				} else {
 					// ugly & unreliable workaround - fix NULL and "" to avoid f**king "non-numeric value encountered" since 7.1
@@ -669,7 +704,7 @@ class TemplateEngine
 						$val = floatval($val); // fix eval crash: null -> 0 in formulas
 					} else {
 						// probably not formula - cast to string
-						$val = self::normnalizeEvalExpr($val);
+						$val = self::normalizeEvalExpr($val);
 					}
 				}
 				if (false === strpos($key, '{{')) {
@@ -690,7 +725,7 @@ class TemplateEngine
 	* Return normalized string for IF eval stripped off quotes
 	* @param string $val
 	*/
-	protected static function normnalizeEvalExpr($val)
+	protected static function normalizeEvalExpr($val)
 	{
 		// fix eval crash: null -> ""
 		return '"'.str_replace('"', '', (string) $val).'"';

@@ -500,6 +500,7 @@ HTML;
 			],
 			*/
 		];
+		$engine->reset();
 		$resultHtml = $engine->render('@templates/_invoice.html', $params);
 
 		$this->assertTrue(
@@ -543,6 +544,73 @@ HTML;
 		$html = "your name is {{ Customer.name ? Customer.name : 'unknown' }}"; // customer and Customer will translate into same object
 		$resultHtml = $engine->render($html, $params);
 		$this->assertTrue($resultHtml == 'your name is John Doe');
+
+		$html = "your name is {{ Customer ? Customer.name : 'unknown' }}";
+		$resultHtml = $engine->render($html, $params);
+		$this->assertTrue($resultHtml == 'your name is John Doe');
+
+		$html = "{{ a && b ? 'yes' : 'no' }}";
+		$resultHtml = $engine->render($html, ['a' => 1, 'b' => 1]);
+		$this->assertTrue($resultHtml == 'yes');
+
+		$resultHtml = $engine->render($html);
+		$this->assertTrue($resultHtml == $html); // untranslated
+
+		$engine->setForceReplace('---');
+		$resultHtml = $engine->render($html);
+		$this->assertTrue($resultHtml == '---'); // untranslated, replaced with replacement string
+
+		$html = "{{ a || b ? 'yes' : 'no' }}";
+		$resultHtml = $engine->render($html, ['a' => 1]);
+		$this->assertTrue($resultHtml == 'yes');
+
+		$resultHtml = $engine->render($html, ['b' => 1]);
+		$this->assertTrue($resultHtml == '---');
+
+		// objects
+		$engine->reset();
+
+		$params = ['object' => new stdClass()];
+		$html = <<<HTML
+{{ if object }}
+GOOD
+{{ else }}
+BAD
+{{ endif }}
+HTML;
+
+		$resultHtml = $engine->render($html, $params);
+		$this->assertTrue(false !== strpos($resultHtml, "GOOD"));
+
+		$html = <<<HTML
+{{ if object.fakeStuff }}
+GOOD
+{{ else }}
+BAD
+{{ endif }}
+HTML;
+
+		// this will crash inside eval(), records PHP parse error, and returns:
+		// - full original directive if no replace = false
+		// - replacement string if set via forceReplace()
+		$resultHtml = $engine->render($html, $params);
+		$this->assertTrue(false !== strpos($resultHtml, "BAD") && $engine->getErrors());
+
+		$html = <<<HTML
+{{ if objectxxxx.fakeStuff }}
+GOOD
+{{ else }}
+BAD
+{{ endif }}
+HTML;
+		// neprelozi, objekt neexistuje
+		$engine->reset();
+		$resultHtml = $engine->render($html, $params);
+
+		$this->assertTrue(false !== strpos($resultHtml, "BAD"));
+		//$this->assertTrue($engine->getErrors()); // parse error - object.fakeStuff does not exist, but engine will not fail
+
+		$engine->clearErrors();
 	}
 
 	/**
@@ -591,5 +659,27 @@ class Customer extends \yii\base\Model
 	public function init()
 	{
 		$this->datetime_created = date('Y-m-d H:i:s');
+	}
+}
+
+class Dummy
+{
+	public $namePub = 'John Pub Prop';
+
+	protected $nameProt = 'John Prot Prop';
+
+	public function myNamePub()
+	{
+		return 'John Pub Method';
+	}
+
+	public function getMyNameGetter()
+	{
+		return 'John Pub Getter';
+	}
+
+	protected function myNameProt()
+	{
+		return 'John Prot Method';
 	}
 }
