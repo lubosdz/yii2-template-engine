@@ -16,6 +16,7 @@
 *  - IF .. ELSEIF .. ELSE .. ENDIF
 *  - FOR ... ELSEFOR .. ENDFOR
 *  - SET variable = expression
+*  - Ternary operator
 *  - IMPORT subtemplate
 *  - dynamic custom directives
 *  - built-in most common directives and date/time formatter
